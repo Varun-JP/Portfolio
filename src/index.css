@@ -1,42 +1,162 @@
+/* Import Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&family=Space+Grotesk:wght@300;500;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700;900&display=swap");
+@font-face {
+  font-family: "Melete";
+  src: url("/fonts/Melete/Melete-Bold.woff2") format("woff2"),
+       url("/fonts/Melete/Melete-Bold.woff") format("woff");
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
 @import "tailwindcss";
 
 @theme {
   --color-border: hsl(var(--border));
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
-
   --color-primary: hsl(var(--primary));
   --color-primary-foreground:hsl(var(--primary-foreground));
-
   --color-card: hsl(var(--card));
 
-  
---animate-float: float 6s ease-in-out infinite;
---animate-pulse-subtle: pulse-subtle 4s ease-in-out infinite; 
---animate-fade-in: fade-in 0.7s ease-out forwards;
---animate-fade-in-delay-1: fade-in 0.7s ease-out 0.2s forwards;
---animate-fade-in-delay-2: fade-in 0.7s ease-out 0.4s forwards; 
---animate-fade-in-delay-3: fade-in 0.7s ease-out 0.6s forwards; 
---animate-fade-in-delay-4: fade-in 0.7s ease-out 0.8s forwards;
---animate-meteor: meteor 5s linear infinite;
+  /* Font families */
+  --font-space-grotesk: 'Space Grotesk', sans-serif;
+  --font-inter: 'Inter', sans-serif;
 
-@keyframes float {
-  0%,
-  100% {
-    transform: translateY(0);
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-pulse-subtle: pulse-subtle 4s ease-in-out infinite; 
+  --animate-fade-in: fade-in 0.7s ease-out forwards;
+  --animate-meteor: meteor 5s linear infinite;
+}
+
+/* Light/Dark variables */
+@layer base {
+  :root {
+      --background: 210 40% 90%;
+      --foreground: 222 47% 11%;
+      --card: 0 0% 100%;
+      --primary: 250 47% 60%;
+      --primary-foreground: 210 40% 98%;
+      --border: 214 32% 91%;
   }
-  50% {
-    transform: translateY(-10px);
+  .dark {
+      --background: 0 0% 0%;
+      --foreground: 213 31% 91%;
+      --card: 222 47% 65%;
+      --primary: 250 65% 65%;
+      --primary-foreground: 213 31% 91%;
+      --border: 217 33% 20%;    
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+  
+  body {
+    @apply bg-background text-foreground transition-colors duration-300;
+    font-family: var(--font-inter);
+    font-feature-settings: "rlig" 1, "calt" 1;
+    line-height: 1.6;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-space-grotesk);
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+
+  p {
+    line-height: 1.8;
+    margin-bottom: 1rem;
+  }
+
+  ::selection {
+    background-color: hsl(30, 100%, 55%);
+    color: white;
   }
 }
+
+/* Typography Utilities */
+@utility heading-xl {
+  @apply text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight;
+  font-family: var(--font-space-grotesk);
+}
+
+@utility heading-lg {
+  @apply text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight;
+  font-family: var(--font-space-grotesk);
+}
+
+@utility heading-md {
+  @apply text-3xl md:text-4xl font-bold tracking-tight;
+  font-family: var(--font-space-grotesk);
+}
+
+@utility heading-sm {
+  @apply text-2xl md:text-3xl font-semibold tracking-tight;
+  font-family: var(--font-space-grotesk);
+}
+
+@utility body-lg {
+  @apply text-lg md:text-xl leading-relaxed;
+  font-family: var(--font-inter);
+}
+
+@utility body-md {
+  @apply text-base md:text-lg leading-relaxed;
+  font-family: var(--font-inter);
+}
+
+/* Utilities */
+@utility text-glow {
+  @apply relative;
+  text-shadow: 0 0 10px rgba(167, 139, 250,0.5);
+}
+
+@utility card-hover {
+  @apply transition-transform duration-300 hover:scale-[1.02] hover:shadow-lg;
+}
+
+@utility cosmic-button {
+  @apply px-6 py-3 rounded-full bg-primary text-primary-foreground font-semibold
+         transition-all duration-300 hover:shadow-[0_0_20px_rgba(139,92,246,0.6)]
+         hover:scale-105 active:scale-95;
+  font-family: var(--font-space-grotesk);
+  letter-spacing: 0.02em;
+}
+
+@utility star {
+  @apply absolute rounded-full;
+  box-shadow: 0 0 10px 2px rgba(255, 255, 255, 0.4);
+  background-color: white;
+}
+
+:root:not(.dark) .star {
+  box-shadow: 0 0 0px #e6d4d400;
+  background-color: #ffffff00;
+}
+
+@utility meteor {
+  @apply absolute rounded-full;
+  background: linear-gradient(to right, white, rgba(255,255,255,0.1), transparent);
+  box-shadow: 0 0 10px rgba(255,255,255,0.2);
+  width: 80px;
+  height: 2px;
+}
+
+/* Animations */
+@keyframes float { 
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
 @keyframes pulse-subtle {
-  0% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.8;
-  }
+  0% { opacity: 1; }
+  50% { opacity: 0.8; }
+  100% { opacity: 1; }
 }
+
 @keyframes fade-in {
   from {
     opacity: 0;
@@ -46,133 +166,321 @@
     opacity: 1;
     transform: translateY(0);
   }
-
-   
 }
-@keyframes meteor{
-  0%{
+
+@keyframes meteor {
+  0% {
     transform: rotate(215deg) translateX(0);
     opacity: 1;
   }
-  70%{
+  70% {
     opacity: 1;
   }
-  100%{
-    transform: rotate(215deg) translateX(-500px); /* move diagonally */
-    opacity: 0;     
+  100% {
+    transform: rotate(215deg) translateX(-500px);
+    opacity: 0;
   }
 }
+
+@keyframes fadeInSpline {
+  to { opacity: 1; }
 }
 
-@layer base{
-  :root {
-      --background: 210 40% 90%;
-      --foreground: 222 47% 11%;
-      
-      --card: 0 0% 100%;
-      --primary: 250 47% 60%;
-      --primary-foreground: 210 40% 98%;
+/* Hide default scrollbar */
+::-webkit-scrollbar {
+  display: none;
+}
 
-      --border: 214 32% 91%;
+html, body {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+* {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+*::-webkit-scrollbar {
+  display: none;
+}
+
+/* -------------------------------------------------------
+   TRANSITION SUPPORT STYLES
+-------------------------------------------------------- */
+
+/* Smooth transitions for mask properties */
+* {
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+
+/* Section base styles */
+.intro {
+  position: relative;
+  width: 100vw;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+/* -------------------------------------------------------
+   🧩 TILTED SLIDER STYLES
+-------------------------------------------------------- */
+
+.slider-wrapper-tilt {
+  width: 100vw;
+  height: 60vh;
+  min-height: 500px;
+  overflow: hidden;
+  transform: rotate(12deg);
+  transform-origin: center;
+  pointer-events: none;
+  margin: 0 -1.5rem;
+}
+
+.slider-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  user-select: none;
+  pointer-events: auto;
+}
+
+.slide-track {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  will-change: transform;
+}
+
+.slide {
+  flex-shrink: 0;
+  width: 350px;
+  height: 450px;
+  margin: 0 20px;
+  position: relative;
+  top: 50%;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.slide:nth-child(odd) {
+  transform: translateY(calc(-50% - 40px));
+}
+
+.slide:nth-child(even) {
+  transform: translateY(calc(-50% + 40px));
+}
+
+.slide:hover {
+  transform: translateY(calc(-50% - 50px)) scale(1.05) !important;
+  z-index: 100;
+}
+
+.slide:nth-child(even):hover {
+  transform: translateY(calc(-50% + 30px)) scale(1.05) !important;
+}
+
+.slide-image {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  flex: 1;
+  border-radius: 0;
+  border: 3px solid hsl(var(--border));
+  background: hsl(var(--card));
+  position: relative;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-sizing: border-box;
+}
+
+.slide:hover .slide-image {
+  border-color: hsl(var(--primary));
+  box-shadow: 
+    0 0 30px hsla(var(--primary), 0.4),
+    0 0 60px hsla(var(--primary), 0.2),
+    0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.slide-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  will-change: transform;
+  transform: scale(2.15);
+  user-select: none;
+  transition: transform 0.8s ease;
+  display: block;
+  border-radius: 1.25rem;
+}
+
+.slide:hover .slide-image img {
+  transform: scale(2.35);
+}
+
+.slide-hover-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.7) 40%, transparent 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: flex-start;
+  padding: 2rem;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: 10;
+  border-radius: 1.25rem;
+  pointer-events: none;
+}
+
+.slide:hover .slide-hover-overlay {
+  opacity: 1;
+}
+
+.slide-hover-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 0.5rem;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+  font-family: var(--font-space-grotesk);
+}
+
+.slide-hover-desc {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.5;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+  font-family: var(--font-inter);
+}
+
+.slide-overlay {
+  position: absolute;
+  bottom: -1.75rem;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
+  z-index: 10;
+  transition: opacity 0.3s ease;
+  opacity: 0;
+  color: hsl(var(--foreground));
+}
+
+.slide:hover .slide-overlay {
+  opacity: calc(1 - var(--slider-moving, 1));
+}
+
+.project-title {
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-family: var(--font-space-grotesk);
+}
+
+.project-arrow {
+  width: 18px;
+  height: 18px;
+  color: hsl(var(--primary));
+}
+
+.project-arrow svg {
+  width: 100%;
+  height: 100%;
+}
+
+.fade-in-spline {
+  opacity: 0;
+  animation: fadeInSpline 1s ease forwards;
+}
+
+/* -------------------------------------------------------
+   📱 RESPONSIVE STYLES
+-------------------------------------------------------- */
+
+@media (max-width: 1000px) {
+  .slider-wrapper-tilt {
+    height: 50vh;
+    min-height: 400px;
   }
-  .dark{
-    --background: 222 47% 4%;
-    --foreground: 213 31% 91%;
-      
-    --card: 222 47% 65%;
-    --primary: 250 65% 65%;
-    --primary-foreground: 213 31% 91%;
 
-    --border: 217 33% 20%;    
+  .slide {
+    width: 215px !important;
+    height: 300px !important;
   }
 
-
-  * {
-    @apply border-border;
-
+  .slide:nth-child(odd) {
+    transform: translateY(calc(-50% - 20px));
   }
 
+  .slide:nth-child(even) {
+    transform: translateY(calc(-50% + 20px));
+  }
+
+  .slide:hover {
+    transform: translateY(calc(-50% - 25px)) scale(1.03) !important;
+  }
+
+  .slide:nth-child(even):hover {
+    transform: translateY(calc(-50% + 15px)) scale(1.03) !important;
+  }
+
+  .slide-hover-title {
+    font-size: 1.1rem;
+  }
+
+  .slide-hover-desc {
+    font-size: 0.8rem;
+  }
+}
+
+@layer base {
   html {
-    @apply scroll-smooth;
-
+    scroll-behavior: auto; /* Disable browser smooth scroll, we'll use better method */
   }
-  body {
-    @apply bg-background text-foreground transition-colors duration-300;
-    font-feature-settings: "rlig" 1, "calt" 1;
-  }
-}
-
-/*utility class*/
-@utility container {
-  margin-inline : auto;
-  padding-inline : 2rem;
-
-  @media(width >=640px){
-    max-width : 640px;
-  }
-  @media(width >=768px){
-    max-width : 768px;
-  } 
-  @media(width >=1024px){
-    max-width : 1024px;
-  } 
-  @media(width >=1280px){
-    max-width : 1280px;
-  } 
-  @media(width >=1400px){
-    max-width : 1400px;
-  } 
-   
   
+  /* Smooth scrolling with custom easing */
+  html, body {
+    scroll-behavior: smooth;
+    scroll-snap-type: none;
+  }
+
+  /* Force smooth scroll on anchors */
+  a[href^="#"] {
+    scroll-behavior: smooth;
+  }
 }
 
-@utility text-glow {
-  @apply relative;
-  text-shadow: 0 0 10px rgba(167, 139, 250,0.5);
+/* Add this new utility */
+@utility smooth-scroll {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
 }
 
-@utility card-hover {
-  @apply transition-transform duration-300 hover:scale-[1.02] hover:shadow-lg;
-}
-@utility gradient-border {
-  @apply relative rounded-md;
-  background: linear-gradient(to right, hsl(var(--card)));
-  background-clip: padding-box;
-  border: 1px solid transparent;
-}
-@utility cosmic-button {
-  @apply px-6 py-2 rounded-full bg-primary text-primary-foreground font-medium
-         transition-all duration-300 hover:shadow-[0_0_10px_rgba(139,92,246,0.5)]
-         hover:scale-105 active:scale-95;
-
-}
-@utility star {
-  @apply absolute rounded-full;
-  box-shadow: 0 0 10px 2px rgba(255, 255, 255, 0.4);
-  background-color: white;
+.font-Sinistre {
+  font-family: "Sinistre", system-ui, sans-serif !important;
 }
 
-/* Light mode subtle stars */
-:root:not(.dark) .star {
-  box-shadow: 0 0 0px #e6d4d400; /*making the stars dissapear*/
-  background-color: #ffffff00;
+.font-basteleur-master {
+  font-family: "basteleur-master", system-ui, sans-serif !important;
+}
+
+.font-Melete {
+  font-family: "Melete", system-ui, sans-serif !important;
 }
 
 
-@utility meteor {
-  @apply absolute rounded-full;
-  background: linear-gradient(to right, white, rgba(255,255,255,0.1), transparent);
-  box-shadow: 0 0 10px rgba(255,255,255,0.2);
-  width: 80px; /* or size*20 in JS */
-  height: 2px; /* thin tail */
-}
-
-
-
-
-#root {
-  max-width: 100%;
-  margin: 0 auto;
-  padding: 0;
-  text-align: center;
-}
+/* -------------------------------------------------------
+   CAROUSEL COMPONENT STYLES
+-------------------------------------------------------- */

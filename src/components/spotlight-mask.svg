@@ -1,0 +1,4 @@
+<svg width="500" height="500" viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
+  <!-- Geometric hexagon mask -->
+  <path d="M250,100 L350,175 L350,325 L250,400 L150,325 L150,175 Z" fill="white"/>
+</svg>

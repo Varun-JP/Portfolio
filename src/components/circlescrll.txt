@@ -1,0 +1,165 @@
+import { useEffect, useState, useRef } from "react";
+
+export const CircularScrollIndicator = () => {
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [activeSection, setActiveSection] = useState(0);
+
+  const sections = [
+    { id: "hero", label: "Home" },
+    { id: "about", label: "About" },
+    { id: "skills", label: "Skills" },
+    { id: "projects", label: "Projects" },
+    { id: "contact", label: "Contact" }
+  ];
+
+  const sectionElements = useRef([]);
+
+  useEffect(() => {
+    sectionElements.current = sections.map(s => document.getElementById(s.id));
+
+    let ticking = false;
+
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const scrollTop = window.scrollY;
+          const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+          const percent = Math.min((scrollTop / docHeight) * 100, 100);
+
+          setScrollProgress(percent);
+
+          const viewportMiddle = window.innerHeight / 2;
+          let current = 0;
+
+          sectionElements.current.forEach((section, index) => {
+            if (section) {
+              const rect = section.getBoundingClientRect();
+              if (rect.top <= viewportMiddle && rect.bottom > viewportMiddle) {
+                current = index;
+              }
+            }
+          });
+
+          setActiveSection(current);
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const SectionDot = ({ section, index, isActive }) => {
+    return (
+      <a 
+        href={`#${section.id}`} 
+        className="group relative"
+      >
+        {/* Ripple and pulse effects (from original design) */}
+        {isActive && (
+          <>
+            <div className="absolute inset-0 -m-3 rounded-full border-2 border-purple-400/30 animate-ping" style={{ animationDuration: '2s' }} />
+            <div className="absolute inset-0 -m-2 rounded-full bg-purple-400/10 animate-pulse" />
+          </>
+        )}
+
+        {/* Main dot */}
+        <div className="relative w-3 h-3">
+          <div className={`w-full h-full rounded-full transition-all duration-300 ${
+            isActive
+              ? 'bg-gradient-to-br from-purple-400 to-purple-600 scale-125 shadow-lg shadow-purple-500/50'
+              : 'bg-white/30 group-hover:bg-white/50 group-hover:scale-110'
+          }`} />
+        </div>
+
+        {/* Connecting line */}
+        {index < sections.length - 1 && (
+          <div className="absolute left-1/2 -translate-x-1/2 top-full h-16 flex items-center justify-center">
+            <div className={`w-0.5 h-full transition-all duration-500 ${
+              index < activeSection
+                ? 'bg-gradient-to-b from-purple-400 to-purple-600/50'
+                : 'bg-white/20'
+            }`} />
+          </div>
+        )}
+
+        {/* Label tooltip */}
+        <div className="absolute left-full ml-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap">
+          <div className="px-4 py-2 bg-black/90 text-white text-sm rounded-lg border border-white/20 shadow-xl">
+            {section.label}
+          </div>
+        </div>
+      </a>
+    );
+  };
+
+  return (
+    <>
+      {/* Left Side Progress Circle */}
+      <div className="hidden lg:flex fixed left-8 top-1/2 -translate-y-1/2 z-50 items-center justify-center">
+        <div className="relative w-16 h-16">
+          {/* Outer glow */}
+          <div className="absolute inset-0 rounded-full bg-purple-500/20 blur-xl" />
+          
+          {/* Background circle */}
+          <div className="absolute inset-0 rounded-full bg-black/60 backdrop-blur-sm border border-white/10" />
+
+          {/* Progress ring */}
+          <svg className="absolute inset-0 w-full h-full -rotate-90">
+            {/* Background ring */}
+            <circle
+              cx="32"
+              cy="32"
+              r="28"
+              fill="none"
+              stroke="rgba(255,255,255,0.1)"
+              strokeWidth="2"
+            />
+            {/* Active progress */}
+            <circle
+              cx="32"
+              cy="32"
+              r="28"
+              fill="none"
+              stroke="url(#progress-gradient)"
+              strokeWidth="2"
+              strokeDasharray={`${(scrollProgress / 100) * 175.93} 175.93`}
+              strokeLinecap="round"
+              className="transition-all duration-300"
+              style={{ filter: 'drop-shadow(0 0 6px rgba(168, 85, 247, 0.6))' }}
+            />
+            <defs>
+              <linearGradient id="progress-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#a855f7" />
+                <stop offset="100%" stopColor="#8b5cf6" />
+              </linearGradient>
+            </defs>
+          </svg>
+
+          {/* Center percentage */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-xs font-bold text-purple-300">
+              {Math.round(scrollProgress)}%
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Side Section Dots */}
+      <div className="hidden lg:flex fixed right-12 top-1/2 -translate-y-1/2 z-50 flex-col items-center gap-16">
+        {sections.map((section, index) => (
+          <SectionDot
+            key={section.id}
+            section={section}
+            index={index}
+            isActive={activeSection === index}
+          />
+        ))}
+      </div>
+    </>
+  );
+};

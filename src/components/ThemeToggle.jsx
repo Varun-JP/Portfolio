@@ -1,47 +1,20 @@
-import { useEffect, useState } from "react";
 import { Moon, Sun } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useTheme } from "../contexts/ThemeContext";
 
 export const ThemeToggle = () => {
-    const [isDarkMode,setIsDarkMode]=useState(false);
-    useEffect(() => {
-        const storedTheme = localStorage.getItem("theme");
-        if(storedTheme=="dark"){
-            setIsDarkMode(true);
-            document.documentElement.classList.add("dark");
+  const { isDark, toggleTheme } = useTheme();
 
-        }
-        else{
-            localStorage.setItem("theme","light");
-            setIsDarkMode(false);
-
-        }
-        
-    },[])
-    const toggleTheme = () => {
-        if(isDarkMode){
-            document.documentElement.classList.remove("dark");
-            localStorage.setItem("theme","light");
-            setIsDarkMode(false);
-            window.dispatchEvent(new Event("themeChange")); // <-- emit even
-        }
-        else{
-            document.documentElement.classList.add("dark");
-            localStorage.setItem("theme","dark");
-            //to store the value of settings we use local storage
-            setIsDarkMode(true);
-            window.dispatchEvent(new Event("themeChange")); // <-- emit event
-        }
-    }
-    return (
-    <button onClick={toggleTheme} className={cn("fixed max-sm:hidden top-5 right-5 z-50 p-2 rounded-full transition-colors duration-300 ", 
-        "focus:outline-hidden"
-    )}>
-
-        {""}
-        {isDarkMode? 
-        (<Sun className="h-6 w-6 text-yellow-300"/>): 
-        (<Moon className="h-6 w-6 text-blue-900"/>)
-        }</button>
-    )
-    }
+  return (
+    <button
+      onClick={toggleTheme}
+      className="p-2 rounded-md hover:bg-accent transition-colors"
+      aria-label="Toggle theme"
+    >
+      {isDark ? (
+        <Sun className="h-5 w-5" />
+      ) : (
+        <Moon className="h-5 w-5" />
+      )}
+    </button>
+  );
+};

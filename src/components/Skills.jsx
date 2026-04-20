@@ -1,76 +1,394 @@
+import { useState, useRef } from "react";
+import { cn } from "@/lib/utils";
+import { useTheme } from "../contexts/ThemeContext";
+import { ChromaHeading, SectionReveal } from "./SectionReveal";
+import { useScrollZoom } from "../hooks/useScrollZoom";
+import {
+  FaHtml5,
+  FaCss3Alt,
+  FaJs,
+  FaReact,
+  FaNodeJs,
+  FaGitAlt,
+  FaGithub,
+  FaPython,
+  FaJava,
+  FaDocker,
+} from "react-icons/fa";
+import { 
+  SiMongodb, 
+  SiTailwindcss, 
+  SiCplusplus, 
+  SiR, 
+  SiDjango, 
+  SiMysql, 
+  SiPostgresql, 
+  SiPytorch, 
+  SiTensorflow, 
+  SiOpencv, 
+  SiNumpy, 
+  SiPandas 
+} from "react-icons/si";
 
-import { useState } from "react";
-import {cn} from "@/lib/utils";
+const skills = [
+  { name: "Python", icon: <FaPython />, category: "Programming", color: "#3776ab" },
+  { name: "JavaScript", icon: <FaJs />, category: "Programming", color: "#facc15" },
+  { name: "Java", icon: <FaJava />, category: "Programming", color: "#f89820" },
+  { name: "C++", icon: <SiCplusplus />, category: "Programming", color: "#00599c" },
+  { name: "R", icon: <SiR />, category: "Programming", color: "#276dc3" },
+  { name: "HTML5", icon: <FaHtml5 />, category: "Web & Frontend", color: "#f97316" },
+  { name: "CSS3", icon: <FaCss3Alt />, category: "Web & Frontend", color: "#3b82f6" },
+  { name: "React", icon: <FaReact />, category: "Web & Frontend", color: "#22d3ee" },
+  { name: "Tailwind CSS", icon: <SiTailwindcss />, category: "Web & Frontend", color: "#38bdf8" },
+  { name: "Node.js", icon: <FaNodeJs />, category: "Web & Frontend", color: "#22c55e" },
+  { name: "Django", icon: <SiDjango />, category: "Web & Frontend", color: "#0c4b33" },
+  { name: "MySQL", icon: <SiMysql />, category: "Databases", color: "#00758f" },
+  { name: "PostgreSQL", icon: <SiPostgresql />, category: "Databases", color: "#336791" },
+  { name: "MongoDB", icon: <SiMongodb />, category: "Databases", color: "#16a34a" },
+  { name: "PyTorch", icon: <SiPytorch />, category: "AI & ML", color: "#ee4c2c" },
+  { name: "TensorFlow", icon: <SiTensorflow />, category: "AI & ML", color: "#ff6f00" },
+  { name: "OpenCV", icon: <SiOpencv />, category: "AI & ML", color: "#5c3ee8" },
+  { name: "NumPy", icon: <SiNumpy />, category: "AI & ML", color: "#4dabcf" },
+  { name: "Pandas", icon: <SiPandas />, category: "AI & ML", color: "#150458" },
+  { name: "Git", icon: <FaGitAlt />, category: "Tools & DevOps", color: "#ea580c" },
+  { name: "GitHub", icon: <FaGithub />, category: "Tools & DevOps", color: "#6b7280" },
+  { name: "Docker", icon: <FaDocker />, category: "Tools & DevOps", color: "#2496ed" },
+];
 
-const skills= [
-    {name:"HTML/CSS",level:80,category:"Frontend"},
-    {name:"JavaScript",level:70,category:"Frontend"},
-    {name:"React",level:80,category:"Frontend"},
-    {name:"Next.js",level:80,category:"Frontend"},
-    {name:"Tailwind CSS",level:80,category:"Frontend"}, 
+const categories = ["all", "Programming", "Web & Frontend", "Databases", "AI & ML", "Tools & DevOps"];
 
-    {name:"Node.js",level:70,category:"Backend"},
-    {name:"Express.js",level:70,category:"Backend"},
-    {name:"MongoDB",level:60,category:"Backend"},
-
-    {name:"Git",level:80,category:"Version Control"},
-    {name:"GitHub",level:80,category:"Version Control"},
-    {name:"VSCode",level:80,category:"Version Control"},
-    {name:"Postman",level:80,category:"Version Control"},
-    {name:"Netlify",level:80,category:"Version Control"}
-
-]
-
-const categories= ["all","Frontend","Backend","Version Control"]
 export const Skills = () => {
-    const [activeCategory, setActiveCategory] = useState("all");
-    const filteredSkills = skills.filter((skill)=>activeCategory === "all" ||  skill.category === activeCategory);
-    return (
-        <section id="skills" className="py-24 px-4 relative bg-secondary/30">
-            <div className="container mx-auto max-w-5xl">
-                <h2 className="text-3xl md:text-4xl font-bold mb-12 text-center">
-                    My <span className="text-primary"> Skills</span>
-                </h2>
-                <div className="flex flex-wrap justify-center gap-4 mb-12">
-                    {categories.map((category,key)=> (
-                        <button
-                        key={key}
-                        onClick={() => setActiveCategory(category)}
-                        className={cn(
-                        "px-5 py-2 rounded-full transition-colors duration-300 capitalize",
-                        activeCategory === category
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-secondary/70 text-foreground hover:bg-secondary"
-                        )}
-                        >
-                        {category}
-                        </button>
-                    ))}
+  const [activeCategory, setActiveCategory] = useState("all");
+  const [hoveredSkill, setHoveredSkill] = useState(null);
+  const { isDark } = useTheme();
+
+  // Ref for the hex grid — scroll-zoom reveal
+  const hexGridRef = useRef(null);
+  useScrollZoom(hexGridRef, {
+    fromVars: { opacity: 0, scale: 0.88, y: 50 },
+    toVars:   { opacity: 1, scale: 1,    y: 0  },
+    duration: 1.2,
+    ease: "power3.out",
+    start: "top 80%",
+  });
+
+  const filteredSkills = skills.filter(
+    (skill) => activeCategory === "all" || skill.category === activeCategory
+  );
+
+  // Add empty placeholders to center the grid when there are fewer items
+  const getDisplaySkills = () => {
+    const count = filteredSkills.length;
+    // If we have 10 or fewer items, add placeholders to make a fuller grid
+    if (count <= 10 && count > 0) {
+      const targetCount = Math.ceil(count / 7) * 7; // Round up to next multiple of 7
+      const placeholders = Array(targetCount - count).fill(null);
+      // Add half placeholders at start, half at end to center
+      const startPlaceholders = Math.floor(placeholders.length / 2);
+      const endPlaceholders = placeholders.length - startPlaceholders;
+      return [
+        ...Array(startPlaceholders).fill(null),
+        ...filteredSkills,
+        ...Array(endPlaceholders).fill(null)
+      ];
+    }
+    return filteredSkills;
+  };
+
+  const displaySkills = getDisplaySkills();
+
+  return (
+    <section 
+      className="py-24 px-6 relative overflow-hidden bg-gradient-to-b from-background via-secondary/20 to-background" 
+      id="skills"
+      style={{ scrollMarginTop: "-20px" }}
+    >
+      <div className="absolute inset-0 opacity-30 pointer-events-none">
+        <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
+      </div>
+
+      <div className="hex-container relative z-10">
+        {/* Heading — chromatic aberration zoom */}
+        <div className="text-center mb-16">
+          <ChromaHeading
+            className="text-4xl md:text-5xl font-bold mb-4"
+            start="top 85%"
+          >
+            My <span className="bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">Skills</span>
+          </ChromaHeading>
+          <SectionReveal
+            fromVars={{ opacity: 0, y: 20 }}
+            toVars={{ opacity: 1, y: 0 }}
+            duration={0.8}
+            delay={0.2}
+            start="top 85%"
+          >
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Technologies and tools I use to bring ideas to life
+            </p>
+          </SectionReveal>
+        </div>
+
+        {/* Filter buttons — staggered zoom-in */}
+        <SectionReveal
+          className="flex flex-wrap justify-center gap-3 mb-12"
+          stagger={0.07}
+          fromVars={{ opacity: 0, scale: 0.75, y: 15 }}
+          toVars={{ opacity: 1, scale: 1, y: 0 }}
+          duration={0.6}
+          start="top 85%"
+        >
+          {categories.map((category) => (
+            <button
+              key={category}
+              onClick={() => setActiveCategory(category)}
+              className={cn(
+                "px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 capitalize backdrop-blur-md border",
+                activeCategory === category
+                  ? "bg-purple-500/15 border-purple-500/50 text-purple-700 dark:text-purple-300 shadow-[0_0_15px_rgba(168,85,247,0.15)] scale-105"
+                  : "bg-white/10 dark:bg-black/10 border-black/5 dark:border-white/10 text-muted-foreground hover:bg-white/20 dark:hover:bg-white/5 hover:border-black/10 dark:hover:border-white/20 hover:text-foreground"
+              )}
+            >
+              {category}
+            </button>
+          ))}
+        </SectionReveal>
+
+        {/* Hex grid — scroll-triggered zoom via ref */}
+        <main className="hex-grid" ref={hexGridRef}>
+          {displaySkills.map((skill, index) => (
+            <a
+              key={skill ? `${skill.name}-${index}` : `placeholder-${index}`}
+              href="#"
+              style={{ "--i": index }}
+              onMouseEnter={() => skill && setHoveredSkill(index)}
+              onMouseLeave={() => setHoveredSkill(null)}
+              onClick={(e) => e.preventDefault()}
+              className={!skill ? "hex-placeholder" : ""}
+            >
+              {skill && (
+                <div className="hex-wrapper">
+                  <svg viewBox="0 0 150 170" className="hexagon-svg">
+                    <defs>
+                      <filter id={`glow-${index}`}>
+                        <feGaussianBlur stdDeviation="8" result="coloredBlur" />
+                        <feMerge>
+                          <feMergeNode in="coloredBlur" />
+                          <feMergeNode in="SourceGraphic" />
+                        </feMerge>
+                      </filter>
+                      <linearGradient id={`hexFillGradient-${index}`} x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor="rgba(255,255,255,0.9)" />
+                        <stop offset="100%" stopColor="rgba(240,240,240,0.8)" />
+                      </linearGradient>
+                    </defs>
+
+                    {hoveredSkill === index && (
+                      <polygon
+                        points="75,10 138,47 138,123 75,160 12,123 12,47"
+                        fill="none"
+                        stroke={skill.color}
+                        strokeWidth="7"
+                        opacity="0.6"
+                        filter={`url(#glow-${index})`}
+                        className="hexagon-glow"
+                      />
+                    )}
+
+                    <polygon
+                      points="75,10 138,47 138,123 75,160 12,123 12,47"
+                      fill="none"
+                      stroke={hoveredSkill === index ? skill.color : "currentColor"}
+                      strokeWidth="3"
+                      className={cn(
+                        "transition-all duration-500",
+                        hoveredSkill === index ? "opacity-100" : "opacity-30 dark:opacity-40"
+                      )}
+                      style={{
+                        color: hoveredSkill === index ? skill.color : (isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)')
+                      }}
+                    />
+
+                    <polygon
+                      points="75,15 133,50 133,120 75,155 17,120 17,50"
+                      className="transition-all duration-500"
+                      fill={isDark ? "#000000" : `url(#hexFillGradient-${index})`}
+                      style={{
+                        ...(hoveredSkill === index ? { fill: `${skill.color}20` } : {})
+                      }}
+                    />
+                  </svg>
+
+                  <div className="hexagon-content">
+                    <div
+                      className={cn(
+                        "hex-icon transition-all duration-500",
+                        hoveredSkill === index && "scale-110 animate-float"
+                      )}
+                      style={{ color: skill.color }}
+                    >
+                      {skill.icon}
+                    </div>
+                    <p className="skill-name">
+                      {skill.name}
+                    </p>
+                  </div>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredSkills.map((skill , key) => (
-                        <div key={key}
-                            className="bg-card p-6 rounded-lg shadow-xs card-hover">
+              )}
+            </a>
+          ))}
+        </main>
+      </div>
 
-                            <div className="text-left mb-4">
-                                <h3 className="font-semibold text-lg">{skill.name}</h3>
-                            </div>
+      <style>{`
+        .hex-container {
+          container-type: inline-size;
+        }
 
-                            <div className="w-full bg-secondary/50 h-2 rounded-full overflow-hidden">
-                                <div
-                                className="bg-primary h-2 rounded-full origin-left transition-all duration-500 ease-out"
-                                style={{ width: skill.level + "%" }}
-                                />
-                                </div>
-                                <div className="text-right mt-1">
-                                    <span className="text-sm text-muted-foreground">{skill.level}%</span>
-                                </div>
-                            </div>
+        .hex-grid {
+          --w: 100cqw;
+          --u: 3em;
+          --s: max(0.25rem, 1vmin);
+          --p: calc(var(--w) + var(--s));
+          --q: calc(var(--u) + var(--s));
+          --f: var(--p) / var(--q);
+          --n: max(1, round(down, var(--f)));
+          
+          display: grid;
+          grid-gap: calc(0.5 * var(--s) * 1.732) var(--s);
+          grid-template-columns: repeat(var(--n), 1fr);
+          justify-content: center;
+          margin: calc(0.5 * var(--u)) auto;
+          max-width: 1200px;
+          padding: 0 1rem;
+        }
 
-                    ))}
-            </div>
-            </div>
+        .hex-grid a {
+          --m: round(down, 0.5 * var(--n));
+          --j: mod(var(--i), calc(var(--n) - 1));
+          --e: clamp(0, calc(var(--j) - var(--m) + 1), 1);
+          
+          display: grid;
+          grid-column: calc(2 * mod(var(--j), var(--m)) + 1 + var(--e)) / span 2;
+          overflow: hidden;
+          margin: calc(-25% / 1.732) 0;
+          clip-path: polygon(50% 0, 150% 50%, 50% 100%, -50% 50%);
+          cursor: pointer;
+          text-decoration: none;
+          animation: fadeInUp 0.6s ease-out calc(var(--i) * 0.05s) both;
+          transition: transform 0.3s ease;
+        }
 
-        </section>
-    )
-}
+        .hex-grid a.hex-placeholder {
+          pointer-events: none;
+          opacity: 0;
+        }
+
+        .hex-grid a:not(.hex-placeholder):hover {
+          transform: scale(1.08);
+          z-index: 10;
+        }
+
+        .hex-wrapper {
+          position: relative;
+          width: 100%;
+          aspect-ratio: 1.732 / 2;
+        }
+
+        .hexagon-svg {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+        }
+
+        .hexagon-content {
+          position: absolute;
+          top: 58%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          pointer-events: none;
+        }
+
+        .hex-icon {
+          font-size: clamp(1.5rem, 3vw, 2rem);
+        }
+
+        .skill-name {
+          font-size: clamp(0.6rem, 1.2vw, 0.75rem);
+          font-weight: 600;
+          text-align: center;
+          color: ${isDark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.9)'};
+          margin-top: 0.2rem;
+          line-height: 1.2;
+        }
+
+        .hexagon-glow {
+          animation: pulse-glow 2s ease-in-out infinite;
+        }
+
+        .animate-float {
+          animation: float 1.5s ease-in-out infinite;
+        }
+
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(30px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes pulse-glow {
+          0%, 100% { opacity: 0.4; }
+          50% { opacity: 0.8; }
+        }
+
+        @keyframes float {
+          0%, 100% { transform: translateY(0) scale(1.1); }
+          50% { transform: translateY(-8px) scale(1.1); }
+        }
+
+        @supports not (scale: calc(100cqh / 3lh)) {
+          @property --p {
+            syntax: '<length-percentage>';
+            initial-value: 0px;
+            inherits: true;
+          }
+          @property --q {
+            syntax: '<length-percentage>';
+            initial-value: 0px;
+            inherits: true;
+          }
+          
+          .hex-grid {
+            --f: round(tan(atan2(var(--p), var(--q))), 0.00001);
+          }
+        }
+
+        @media (max-width: 768px) {
+          .hex-grid {
+            --u: 2.5em;
+          }
+          
+          .hex-icon {
+            font-size: 1.25rem;
+          }
+          
+          .skill-name {
+            font-size: 0.55rem;
+          }
+        }
+      `}</style>
+    </section>
+  );
+};

@@ -1,0 +1,287 @@
+/* eslint-disable no-unused-vars */
+import { motion, useInView, useScroll, useTransform } from "framer-motion";
+import { useRef, useLayoutEffect, useState } from "react";
+import { Code, Palette, Rocket, Heart, Sparkles } from "lucide-react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+gsap.registerPlugin(ScrollTrigger);
+
+const features = [
+  {
+    icon: <Code className="w-6 h-6" />,
+    title: "Clean Code",
+    description: "Writing maintainable, scalable, and efficient code.",
+    color: "from-primary/80 to-primary"
+  },
+  {
+    icon: <Palette className="w-6 h-6" />,
+    title: "Design Focus",
+    description: "Creating elegant and intuitive user experiences.",
+    color: "from-primary/80 to-primary"
+  },
+  {
+    icon: <Rocket className="w-6 h-6" />,
+    title: "Performance",
+    description: "Optimizing for smoothness and lightning-fast load times.",
+    color: "from-primary/80 to-primary"
+  },
+  {
+    icon: <Heart className="w-6 h-6" />,
+    title: "User-Centric",
+    description: "Building with empathy and accessibility in mind.",
+    color: "from-primary/80 to-primary"
+  }
+];
+
+const FloatingOrb = ({ delay = 0, size = 300, blur = 100, position = "top-20 left-20" }) => (
+  <motion.div
+    className={`absolute ${position} rounded-full opacity-10 pointer-events-none bg-primary`}
+    style={{
+      width: size,
+      height: size,
+      filter: `blur(${blur}px)`,
+    }}
+    animate={{
+      x: [0, 80, 0],
+      y: [0, -80, 0],
+      scale: [1, 1.1, 1],
+    }}
+    transition={{
+      duration: 10,
+      delay,
+      repeat: Infinity,
+      ease: "easeInOut"
+    }}
+  />
+);
+
+export const AboutMe = () => {
+  const sectionRef = useRef(null);
+  const headingRef = useRef(null);
+  const featuresRef = useRef(null);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  
+  const isInView = useInView(sectionRef, { once: true, amount: 0.2 });
+  
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start end", "end start"]
+  });
+  
+  const y = useTransform(scrollYProgress, [0, 1], [50, -50]);
+
+  useLayoutEffect(() => {
+    if (!sectionRef.current) return;
+
+    const ctx = gsap.context(() => {
+      // Smooth heading fade in
+      gsap.from(".heading-word", {
+        opacity: 0,
+        y: 30,
+        duration: 0.8,
+        stagger: 0.1,
+        ease: "power2.out",
+        scrollTrigger: {
+          trigger: headingRef.current,
+          start: "top 80%",
+        }
+      });
+
+      // Subtle parallax text
+      gsap.utils.toArray(".parallax-text").forEach((elem, i) => {
+        const speed = i % 2 === 0 ? 20 : -20;
+        gsap.to(elem, {
+          y: speed,
+          ease: "none",
+          scrollTrigger: {
+            trigger: sectionRef.current,
+            start: "top bottom",
+            end: "bottom top",
+            scrub: 2,
+          }
+        });
+      });
+
+      // Smooth card entrance
+      gsap.from(".feature-card", {
+        opacity: 0,
+        y: 40,
+        duration: 0.8,
+        stagger: 0.1,
+        ease: "power2.out",
+        scrollTrigger: {
+          trigger: ".feature-grid",
+          start: "top 80%",
+        }
+      });
+
+      // Text fade in
+      gsap.from(".split-line", {
+        opacity: 0,
+        y: 20,
+        duration: 0.6,
+        stagger: 0.1,
+        ease: "power2.out",
+        scrollTrigger: {
+          trigger: ".intro-content",
+          start: "top 75%",
+        }
+      });
+
+    }, sectionRef);
+
+    return () => ctx.revert();
+  }, []);
+
+  const handleMouseMove = (e) => {
+    if (!sectionRef.current) return;
+    const rect = sectionRef.current.getBoundingClientRect();
+    setMousePosition({
+      x: (e.clientX - rect.left - rect.width / 2) / 40,
+      y: (e.clientY - rect.top - rect.height / 2) / 40,
+    });
+  };
+
+  return (
+    <section
+      id="about"
+      ref={sectionRef}
+      onMouseMove={handleMouseMove}
+      className="relative py-24 px-6 md:px-12 overflow-hidden bg-gradient-to-b from-background via-background to-secondary/10"
+    >
+      {/* Subtle Background Orbs */}
+      <FloatingOrb delay={0} size={400} blur={140} position="top-20 left-20" />
+      <FloatingOrb delay={3} size={350} blur={140} position="bottom-20 right-20" />
+      
+      <motion.div 
+        className="max-w-7xl mx-auto relative z-10"
+        style={{ y }}
+      >
+        {/* Heading */}
+        <div ref={headingRef} className="text-center mb-20">
+          <h2 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 flex gap-4 justify-center items-center flex-wrap">
+            <span className="heading-word inline-block">
+              About
+            </span>
+            <span className="heading-word inline-block text-primary">
+              Me
+            </span>
+          </h2>
+          
+          <motion.div 
+            className="w-24 h-1 bg-primary mx-auto rounded-full"
+            initial={{ scaleX: 0 }}
+            animate={isInView ? { scaleX: 1 } : { scaleX: 0 }}
+            transition={{ duration: 0.8, delay: 0.3, ease: "easeOut" }}
+          />
+        </div>
+
+        {/* Intro Content */}
+        <motion.div 
+          className="intro-content max-w-4xl mx-auto text-center mb-24 space-y-6"
+          style={{
+            transform: `translate(${mousePosition.x}px, ${mousePosition.y}px)`,
+            transition: "transform 0.2s ease-out"
+          }}
+        >
+          <div className="split-line">
+            <h3 className="text-3xl md:text-4xl font-bold mb-6">
+              Hello, I'm{" "}
+              <span className="text-primary">
+                Varun JP
+              </span>
+            </h3>
+          </div>
+
+          <p className="split-line parallax-text text-lg md:text-xl text-muted-foreground leading-relaxed">
+            I'm a full-stack developer who enjoys crafting immersive digital
+            experiences with clean structure and visual polish. My work merges
+            design and engineering — focusing on elegant interactions and
+            meaningful UX.
+          </p>
+          
+          <p className="split-line parallax-text text-lg md:text-xl text-muted-foreground leading-relaxed">
+            Outside of development, I'm exploring creative coding, animation
+            systems, and new web design philosophies — blending art and logic.
+          </p>
+
+          <motion.a
+            href="#contact"
+            className="inline-flex items-center gap-3 mt-8 px-8 py-4 rounded-full bg-primary text-primary-foreground text-base font-semibold shadow-lg relative overflow-hidden group"
+            whileHover={{ scale: 1.03, y: -2 }}
+            whileTap={{ scale: 0.98 }}
+            transition={{ duration: 0.2 }}
+          >
+            <span className="relative z-10">Let's Connect</span>
+            <Sparkles className="w-5 h-5 relative z-10" />
+          </motion.a>
+        </motion.div>
+
+        {/* Feature Grid */}
+        <div ref={featuresRef} className="feature-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {features.map((feature, i) => (
+            <motion.div
+              key={i}
+              className="feature-card group"
+              whileHover={{ y: -8 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+            >
+              <div
+                className="relative bg-card border border-border p-8 rounded-2xl shadow-lg hover:shadow-xl overflow-hidden h-full transition-all duration-300"
+                style={{
+                  transform: `perspective(1000px) rotateX(${mousePosition.y / 20}deg) rotateY(${mousePosition.x / 20}deg)`,
+                  transition: "transform 0.2s ease-out, box-shadow 0.3s ease-out"
+                }}
+              >
+                <div className={`absolute inset-0 bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-5 transition-opacity duration-300`} />
+                
+                <div className="relative z-10 flex flex-col items-center text-center space-y-4">
+                  <motion.div 
+                    className={`p-4 rounded-xl bg-gradient-to-br ${feature.color} text-primary-foreground`}
+                    whileHover={{ 
+                      rotate: [0, -5, 5, 0],
+                      transition: { duration: 0.4 }
+                    }}
+                  >
+                    {feature.icon}
+                  </motion.div>
+                  
+                  <h4 className="font-bold text-lg">
+                    {feature.title}
+                  </h4>
+                  
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {feature.description}
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Subtle Floating Particles */}
+      {[...Array(10)].map((_, i) => (
+        <motion.div
+          key={i}
+          className="absolute w-1 h-1 bg-primary/40 rounded-full pointer-events-none"
+          style={{
+            left: `${Math.random() * 100}%`,
+            top: `${Math.random() * 100}%`,
+          }}
+          animate={{
+            y: [0, -20, 0],
+            opacity: [0, 0.6, 0],
+          }}
+          transition={{
+            duration: 4 + Math.random() * 2,
+            repeat: Infinity,
+            delay: Math.random() * 3,
+            ease: "easeInOut"
+          }}
+        />
+      ))}
+    </section>
+  );
+};

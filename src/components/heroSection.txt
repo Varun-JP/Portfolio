@@ -1,0 +1,91 @@
+import { useEffect, useState } from "react";
+import { ArrowDown } from "lucide-react";
+
+export const HeroSection = () => {
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect dark mode
+  useEffect(() => {
+    setIsDarkMode(localStorage.getItem("theme") === "dark");
+    const handler = () =>
+      setIsDarkMode(localStorage.getItem("theme") === "dark");
+    window.addEventListener("themeChange", handler);
+    return () => window.removeEventListener("themeChange", handler);
+  }, []);
+
+  // Detect mobile
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    handleResize(); // initial check
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  return (
+    <section
+      id="hero"
+      className={`relative min-h-screen flex flex-col justify-center items-center px-4 overflow-hidden transition-colors duration-300 ${
+        isDarkMode ? "bg-background text-foreground" : "bg-white-100 text-foreground"
+      }`}
+    >
+      {/* Dark Mode Spline on Desktop only - Script already loaded in HTML head */}
+      {!isMobile && isDarkMode && (
+        <div className="absolute inset-0 w-full h-full">
+          <spline-viewer 
+            loading-anim-type="spinner-small-dark"
+            url="https://prod.spline.design/nf8jZcYwP3KzbsBB/scene.splinecode"
+            style={{
+              width: '100%',
+              height: '100%',
+              border: 'none',
+              display: 'block'
+            }}
+          />
+          <div className="stars"></div>
+          <div className="meteors"></div>
+        </div>
+      )}
+
+      {/* Hero Text Overlay */}
+      {( !isDarkMode || (isDarkMode && isMobile) ) && (
+        <div className="container max-w-4xl mx-auto text-center z-10">
+          <div className="space-y-6">
+            <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
+              <span className="opacity-0 animate-fade-in"> Hi , I am</span>
+              <span className="text-primary opacity-0 animate-fade-in-delay-1">
+                {" "}Varun{" "}
+              </span>
+              <span className="text-gradient ml-2 opacity-0 animate-fade-in-delay-2">
+                {" "}This is my Portfolio{" "}
+              </span>
+            </h1>
+            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto opacity-0 animate-fade-in-delay-3">
+              I'm Varun, a passionate developer who loves building clean,
+              functional, and visually engaging web applications. I work across
+              the full stack, experiment with modern frameworks, and constantly
+              learn new technologies to refine my craft. Beyond coding, I'm
+              drawn to design, problem-solving, and exploring how technology can
+              create meaningful user experiences.
+            </p>
+
+            <div className="opacity-0 animate-fade-in-delay-4">
+              <a href="#projects" className="cosmic-button">
+                View My Work
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Scroll Indicator */}
+      <a
+        href="#about"
+        className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex flex-col items-center animate-bounce z-20"
+      >
+        <span className="text-sm text-muted-foreground mb-2">Scroll</span>
+        <ArrowDown className="h-5 w-5 text-primary" />
+      </a>
+    </section>
+  );
+};

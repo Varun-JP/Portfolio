@@ -1,122 +1,129 @@
-import { ArrowRight, ExternalLink, Github } from "lucide-react";
+import { useMemo, useState } from "react";
+import "./ProjectsSection.css";
 
-const projects = [
+const PROJECTS = [
   {
-    id: 1,
-    title: "SaaS Landing Page",
-    description: "A landing page for a SaaS product",
-    image: "/projects/project1.png",
-    tags: ["React", "Tailwind", "Supabase"],
-    demoURL: "#",
-    githubURL: "#",
+    title: "Nexus Web App",
+    category: "Full Stack",
+    description:
+      "Role-based web platform with secure auth, dashboard analytics, and real-time updates.",
+    tech: ["React", "Node.js", "MongoDB"],
   },
   {
-    id: 2,
-    title: "Portfolio Website",
-    description: "A personal portfolio showcasing my work and skills",
-    image: "/projects/project2.png",
-    tags: ["Next.js", "Tailwind", "Vercel"],
-    demoURL: "#",
-    githubURL: "#",
+    title: "Cipher Security",
+    category: "Backend",
+    description:
+      "Security-focused API service with token management, permission checks, and audit trails.",
+    tech: ["Python", "FastAPI", "JWT"],
   },
   {
-    id: 3,
-    title: "E-commerce Store",
-    description: "An online store with cart and payment integration",
-    image: "/projects/project3.png",
-    tags: ["React", "Node.js", "MongoDB"],
-    demoURL: "#",
-    githubURL: "#",
+    title: "Aurora Dashboard",
+    category: "Frontend",
+    description:
+      "Performance dashboard with interactive charts and clean data drill-down views.",
+    tech: ["TypeScript", "D3.js", "REST API"],
+  },
+  {
+    title: "Pulse Analytics",
+    category: "Data",
+    description:
+      "Event analytics pipeline that tracks usage metrics and exposes actionable insights.",
+    tech: ["JavaScript", "Express", "PostgreSQL"],
+  },
+  {
+    title: "Vertex 3D Renderer",
+    category: "Graphics",
+    description:
+      "Interactive 3D viewer optimized for smooth rendering and intuitive scene controls.",
+    tech: ["Three.js", "WebGL", "GLSL"],
+  },
+  {
+    title: "Phantom CLI Tool",
+    category: "Developer Tools",
+    description:
+      "Automation CLI for local workflows with config profiles and command chaining.",
+    tech: ["Python", "Bash", "Linux"],
+  },
+  {
+    title: "Solaris Platform",
+    category: "Systems",
+    description:
+      "Scalable service architecture for modular features and low-latency data access.",
+    tech: ["Node.js", "React", "Redis"],
+  },
+  {
+    title: "Matrix Algorithm Lab",
+    category: "Algorithms",
+    description:
+      "Algorithm experimentation project focused on optimization and benchmarking.",
+    tech: ["C++", "Python", "Hadoop"],
   },
 ];
 
 export const ProjectsSection = () => {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const featuredProject = useMemo(() => PROJECTS[activeIndex], [activeIndex]);
+
   return (
-    <section id="projects" className="py-24 px-4 relative">
-      <div className="container mx-auto max-w-5xl">
-        {/* Heading */}
-        <h2 className="text-3xl md:text-4xl font-bold mb-4 text-center">
-          Featured <span className="text-primary">Projects</span>
-        </h2>
-        <p className="text-center text-muted-foreground mb-12 max-w-2xl mx-auto">
-          Here are some of the projects I’m currently working on, or have
-          worked on in the past.
-        </p>
-
-        {/* Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {projects.map((project) => (
-            <div
-              key={project.id}
-              className="group bg-card rounded-lg shadow-xs overflow-hidden card-hover"
-            >
-              {/* Image */}
-              <div className="h-48 overflow-hidden">
-                <img
-                  src={project.image}
-                  alt={project.title}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                />
-              </div>
-
-              {/* Content */}
-              <div className="p-6">
-                <h3 className="text-xl font-semibold mb-2">
-                  {project.title}
-                </h3>
-                <p className="text-muted-foreground mb-4">
-                  {project.description}
-                </p>
-
-                {/* Tags */}
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {project.tags.map((tag, index) => (
-                    <span
-                      key={index}
-                      className="px-2 py-1 text-xs font-medium rounded-full bg-secondary text-secondary-foreground"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-
-                {/* Links */}
-                <div className="flex justify-between items-center">
-                  <div className="flex space-x-3">
-                    <a
-                      href={project.demoURL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-foreground/80 hover:text-primary transition-colors duration-300"
-                    >
-                      <ExternalLink size={20} />
-                    </a>
-                    <a
-                      href={project.githubURL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-foreground/80 hover:text-primary transition-colors duration-300"
-                    >
-                      <Github size={20} />
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
+    <section id="projects" className="ps-section">
+      <div className="ps-container">
+        <div className="ps-heading-wrap">
+          <p className="ps-eyebrow">Portfolio</p>
+          <h2 className="ps-heading">Projects Built with Engineering Focus</h2>
+          <p className="ps-intro">
+            A curated selection of projects that reflect my strengths in backend
+            systems, product thinking, and clean implementation.
+          </p>
         </div>
 
-        {/* Footer link */}
-        <div className="text-center mt-12">
-          <a
-            className="cosmic-button w-fit flex items-center mx-auto gap-2"
-            href="https://github.com/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Check out my GitHub for more projects
-            <ArrowRight size={16} />
-          </a>
+        <div className="ps-layout">
+          <article className="ps-featured-card">
+            <div className="ps-image-wrap">
+              <img
+                src={`/projects/img${activeIndex + 1}.jpg`}
+                alt={featuredProject.title}
+                loading="eager"
+                decoding="async"
+              />
+            </div>
+
+            <div className="ps-featured-content">
+              <div className="ps-featured-meta">
+                <span>{featuredProject.category}</span>
+                <span>Featured Project</span>
+              </div>
+              <h3>{featuredProject.title}</h3>
+              <p>{featuredProject.description}</p>
+              <ul className="ps-tech-list">
+                {featuredProject.tech.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          </article>
+
+          <div className="ps-project-list">
+            {PROJECTS.map((project, index) => (
+              <button
+                key={project.title}
+                type="button"
+                className={`ps-project-item${activeIndex === index ? " is-active" : ""}`}
+                onClick={() => setActiveIndex(index)}
+                aria-pressed={activeIndex === index}
+              >
+                <span className="ps-project-index">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <div className="ps-project-copy">
+                  <h4>{project.title}</h4>
+                  <p>{project.category}</p>
+                </div>
+                <span className="ps-project-arrow" aria-hidden="true">
+                  →
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </section>

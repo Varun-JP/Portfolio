@@ -1,0 +1,695 @@
+import { useEffect, useRef } from "react";
+
+// Project titles - single line (first words only)
+const titles = [
+  ["C", "A", "N", "A", "L", "S"],
+  ["M", "A", "N", "K"],
+  ["N", "E", "X", "U", "S"],
+  ["V", "O", "I", "D"],
+  ["P", "U", "L", "S", "E"],
+  ["E", "C", "H", "O"],
+  ["Z", "E", "N", "I", "T", "H"]
+];
+
+export const ProjectsSection = () => {
+  const sectionRef = useRef(null);
+  const sliderNavRef = useRef(null);
+  const sliderContainerRef = useRef(null);
+  const bgOverlayRef = useRef(null);
+  const slideTitleRef = useRef(null);
+  const currentIndexRef = useRef(0);
+  const isAnimatingRef = useRef(false);
+  const isDraggingRef = useRef(false);
+  const startXRef = useRef(0);
+  const currentXRef = useRef(0);
+  const keydownHandlerRef = useRef(null);
+  const lastKeyTimeRef = useRef(0);
+
+  useEffect(() => {
+    const loadGSAP = async () => {
+      if (!window.gsap) {
+        const gsapScript = document.createElement('script');
+        gsapScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js';
+        document.head.appendChild(gsapScript);
+        await new Promise((resolve) => {
+          gsapScript.onload = resolve;
+        });
+      }
+
+      if (!window.CustomEase) {
+        const customEaseScript = document.createElement('script');
+        customEaseScript.src = 'https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/CustomEase.min.js';
+        document.head.appendChild(customEaseScript);
+        await new Promise((resolve) => {
+          customEaseScript.onload = resolve;
+        });
+      }
+
+      initializeSlider();
+    };
+
+    loadGSAP();
+
+    // Cleanup function
+    return () => {
+      if (keydownHandlerRef.current) {
+        window.removeEventListener("keydown", keydownHandlerRef.current, true);
+        keydownHandlerRef.current = null;
+      }
+    };
+  }, []);
+
+  const initializeSlider = () => {
+    const { gsap, CustomEase } = window;
+    if (!gsap || !CustomEase) return;
+
+    const sliderNav = sliderNavRef.current;
+    const sliderContainer = sliderContainerRef.current;
+    const bgOverlay = bgOverlayRef.current;
+    const slideTitle = slideTitleRef.current;
+    const numberOfItems = 7;
+
+    if (!sliderNav || !sliderContainer || !bgOverlay || !slideTitle) return;
+
+    // Clear any existing navigation items first
+    sliderNav.innerHTML = '';
+
+    const getRandomGradient = () => {
+      const letters = "0123456789ABCDEF";
+      const getColor = () => {
+        let color = "#";
+        for (let i = 0; i < 6; i++) {
+          color += letters[Math.floor(Math.random() * 16)];
+        }
+        return color;
+      };
+      
+      const color1 = getColor();
+      const color2 = getColor();
+      const angle = Math.floor(Math.random() * 360);
+      
+      return `linear-gradient(${angle}deg, ${color1}, ${color2})`;
+    };
+
+    const updateTitle = (newIndex, gradient) => {
+      const title = titles[newIndex];
+      const titleContainer = slideTitle.querySelector(".slide-title-row");
+
+      titleContainer.innerHTML = '';
+      
+      for (let i = 0; i < title.length; i++) {
+        const letterDiv = document.createElement("div");
+        letterDiv.classList.add("letter");
+        titleContainer.appendChild(letterDiv);
+      }
+
+      titleContainer.querySelectorAll(".letter").forEach((letter, letterIndex) => {
+        const newSpan = document.createElement("span");
+        const direction = newIndex > currentIndexRef.current ? 150 : -150;
+
+        gsap.set(newSpan, {
+          x: direction,
+          color: '#000000',
+        });
+
+        newSpan.textContent = title[letterIndex] || "";
+        letter.appendChild(newSpan);
+
+        gsap.to(newSpan, {
+          x: 0,
+          duration: 1,
+          ease: "power2.out",
+          delay: letterIndex * 0.05,
+          onComplete: () => {
+            gsap.set(newSpan, { clearProps: "transform,x" });
+          }
+        });
+      });
+    };
+
+    const goToSlide = (targetIndex) => {
+      if (targetIndex < 0 || targetIndex >= numberOfItems) return;
+      if (targetIndex === currentIndexRef.current) return;
+      if (isAnimatingRef.current) return;
+
+      isAnimatingRef.current = true;
+      currentIndexRef.current = targetIndex;
+
+      document.querySelectorAll(".nav-item-wrapper").forEach((nav) =>
+        nav.classList.remove("active")
+      );
+      document.querySelectorAll(".nav-item-wrapper")[targetIndex].classList.add("active");
+
+      const slides = sliderContainer.querySelectorAll(".slide");
+      slides.forEach((slide, idx) => {
+        slide.classList.remove("active", "prev", "next");
+        
+        if (idx === targetIndex) {
+          slide.classList.add("active");
+        } else if (idx === targetIndex - 1 || (targetIndex === 0 && idx === numberOfItems - 1)) {
+          slide.classList.add("prev");
+        } else if (idx === targetIndex + 1 || (targetIndex === numberOfItems - 1 && idx === 0)) {
+          slide.classList.add("next");
+        }
+      });
+
+      const newGradient = getRandomGradient();
+      gsap.to(bgOverlay, {
+        background: newGradient,
+        duration: 1.5,
+        ease: "power2.out",
+      });
+
+      updateTitle(targetIndex, newGradient);
+
+      setTimeout(() => {
+        isAnimatingRef.current = false;
+      }, 200);
+    };
+
+    // Create navigation items
+    sliderNav.innerHTML = '';
+    for (let i = 0; i < numberOfItems; i++) {
+      const navItemWrapper = document.createElement("div");
+      navItemWrapper.classList.add("nav-item-wrapper");
+      navItemWrapper.setAttribute('data-index', i);
+      if (i === 0) {
+        navItemWrapper.classList.add("active");
+      }
+
+      const navItem = document.createElement("div");
+      navItem.classList.add("nav-item");
+      navItemWrapper.appendChild(navItem);
+      sliderNav.appendChild(navItemWrapper);
+
+      navItemWrapper.addEventListener("click", (e) => {
+        e.stopPropagation();
+        goToSlide(i);
+      });
+    }
+
+    // Create slides
+    sliderContainer.innerHTML = '';
+    for (let i = 0; i < numberOfItems; i++) {
+      const slide = document.createElement("div");
+      slide.classList.add("slide");
+      slide.setAttribute('data-slide-index', i);
+      if (i === 0) slide.classList.add("active");
+      if (i === numberOfItems - 1) slide.classList.add("prev");
+      if (i === 1) slide.classList.add("next");
+
+      const imgWrapper = document.createElement("div");
+      imgWrapper.classList.add("img");
+
+      const img = document.createElement("img");
+      img.src = `/projects/img${i + 1}.jpg`;
+      img.alt = `Project ${i + 1}`;
+      imgWrapper.appendChild(img);
+
+      slide.appendChild(imgWrapper);
+      
+      // Add click handler to slide
+      slide.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const clickedIndex = parseInt(slide.getAttribute('data-slide-index'));
+        
+        if (slide.classList.contains("prev")) {
+          goToSlide(clickedIndex);
+        } else if (slide.classList.contains("next")) {
+          goToSlide(clickedIndex);
+        }
+      });
+      
+      sliderContainer.appendChild(slide);
+    }
+
+    // Mouse drag events
+    const handleMouseDown = (e) => {
+      isDraggingRef.current = true;
+      startXRef.current = e.clientX;
+      currentXRef.current = e.clientX;
+      sliderContainer.style.cursor = 'grabbing';
+    };
+
+    const handleMouseMove = (e) => {
+      if (!isDraggingRef.current) return;
+      currentXRef.current = e.clientX;
+    };
+
+    const handleMouseUp = () => {
+      if (!isDraggingRef.current) return;
+      isDraggingRef.current = false;
+      sliderContainer.style.cursor = 'grab';
+
+      const diff = startXRef.current - currentXRef.current;
+      
+      if (Math.abs(diff) > 50) {
+        const direction = diff > 0 ? 1 : -1;
+        let targetIndex = currentIndexRef.current + direction;
+
+        if (targetIndex < 0) targetIndex = numberOfItems - 1;
+        if (targetIndex >= numberOfItems) targetIndex = 0;
+
+        goToSlide(targetIndex);
+      }
+    };
+
+    // Touch events for mobile
+    const handleTouchStart = (e) => {
+      startXRef.current = e.touches[0].clientX;
+      currentXRef.current = e.touches[0].clientX;
+    };
+
+    const handleTouchMove = (e) => {
+      currentXRef.current = e.touches[0].clientX;
+    };
+
+    const handleTouchEnd = () => {
+      const diff = startXRef.current - currentXRef.current;
+      
+      if (Math.abs(diff) > 50) {
+        const direction = diff > 0 ? 1 : -1;
+        let targetIndex = currentIndexRef.current + direction;
+
+        if (targetIndex < 0) targetIndex = numberOfItems - 1;
+        if (targetIndex >= numberOfItems) targetIndex = 0;
+
+        goToSlide(targetIndex);
+      }
+    };
+
+    // Keyboard navigation
+    const handleKeyDown = (e) => {
+      if (isAnimatingRef.current) return;
+
+      if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+        e.preventDefault();
+        
+        if (e.key === "ArrowRight") {
+          let targetIndex = currentIndexRef.current + 1;
+          if (targetIndex >= numberOfItems) targetIndex = 0;
+          goToSlide(targetIndex);
+        } else if (e.key === "ArrowLeft") {
+          let targetIndex = currentIndexRef.current - 1;
+          if (targetIndex < 0) targetIndex = numberOfItems - 1;
+          goToSlide(targetIndex);
+        }
+      }
+    };
+
+    sliderContainer.addEventListener("mousedown", handleMouseDown);
+    sliderContainer.addEventListener("mousemove", handleMouseMove);
+    sliderContainer.addEventListener("mouseup", handleMouseUp);
+    sliderContainer.addEventListener("mouseleave", handleMouseUp);
+    
+    sliderContainer.addEventListener("touchstart", handleTouchStart, { passive: true });
+    sliderContainer.addEventListener("touchmove", handleTouchMove, { passive: true });
+    sliderContainer.addEventListener("touchend", handleTouchEnd);
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    sliderContainer.style.cursor = 'grab';
+
+    updateTitle(0, 'linear-gradient(135deg, rgb(213, 183, 71), rgb(180, 150, 50))');
+
+    return () => {
+      sliderContainer?.removeEventListener("mousedown", handleMouseDown);
+      sliderContainer?.removeEventListener("mousemove", handleMouseMove);
+      sliderContainer?.removeEventListener("mouseup", handleMouseUp);
+      sliderContainer?.removeEventListener("mouseleave", handleMouseUp);
+      sliderContainer?.removeEventListener("touchstart", handleTouchStart);
+      sliderContainer?.removeEventListener("touchmove", handleTouchMove);
+      sliderContainer?.removeEventListener("touchend", handleTouchEnd);
+      if (keydownHandlerRef.current) {
+        window.removeEventListener("keydown", keydownHandlerRef.current, { capture: true });
+      }
+    };
+  };
+
+  return (
+    <section id="projects" ref={sectionRef} className="projects-section-wrapper">
+      {/* Section Header */}
+      <div className="section-header">
+        <h2 className="section-title">
+          Featured <span className="title-accent">Projects</span>
+        </h2>
+        <p className="section-description">
+          Explore my creative work through interactive slides
+        </p>
+      </div>
+
+      {/* Slider Container */}
+      <div className="slider-wrapper-section">
+        <div ref={bgOverlayRef} className="bg-overlay-section" />
+        
+        {/* Navigation Dots */}
+        <div ref={sliderNavRef} className="slider-nav-section" />
+        
+        <div ref={sliderContainerRef} className="slides-section" />
+        <div ref={slideTitleRef} className="slide-title-section">
+          <div className="slide-title-row" />
+        </div>
+      </div>
+
+      <style>{`
+        .projects-section-wrapper {
+          position: relative;
+          padding: 6rem 1.5rem;
+          overflow: hidden;
+          min-height: 100vh;
+          display: flex;
+          flex-direction: column;
+        }
+
+        .section-header {
+          text-align: center !important;
+          margin-bottom: 2rem !important;
+          z-index: 20 !important;
+          position: relative !important;
+        }
+
+        .section-title {
+          font-size: clamp(2.5rem, 5vw, 4rem) !important;
+          font-weight: bold !important;
+          margin-bottom: 1rem !important;
+          line-height: 1.2 !important;
+          letter-spacing: -0.02em !important;
+        }
+
+        .title-accent {
+          background: linear-gradient(to right, #a855f7, #9333ea) !important;
+          -webkit-background-clip: text !important;
+          -webkit-text-fill-color: transparent !important;
+          background-clip: text !important;
+        }
+
+        .section-description {
+          font-size: clamp(1rem, 2vw, 1.25rem) !important;
+          color: #6b7280 !important;
+          max-width: 42rem !important;
+          margin: 0 auto !important;
+          line-height: 1.6 !important;
+        }
+
+        .slider-nav-section {
+          position: absolute !important;
+          top: 5% !important;
+          left: 50% !important;
+          transform: translateX(-50%) !important;
+          margin: 0 !important;
+          width: min(35%, 400px) !important;
+          height: 15px !important;
+          display: flex !important;
+          justify-content: space-between !important;
+          z-index: 20 !important;
+          gap: 0 !important;
+        }
+
+        .nav-item-wrapper {
+          flex: 1 !important;
+          height: 100% !important;
+          display: flex !important;
+          justify-content: center !important;
+          align-items: center !important;
+          transition: all 750ms cubic-bezier(0, 0.75, 0.5, 1) !important;
+          cursor: pointer !important;
+          background: transparent !important;
+          border: none !important;
+          padding: 0 !important;
+          margin: 0 !important;
+        }
+
+        .nav-item {
+          width: 1px !important;
+          height: 100% !important;
+          border: 1px solid rgba(0, 0, 0, 0.15) !important;
+          transition: all 750ms cubic-bezier(0, 0.75, 0.5, 1) !important;
+          background: rgba(0, 0, 0, 0.15) !important;
+        }
+
+        .nav-item-wrapper.active {
+          flex: 1.5 !important;
+        }
+
+        .nav-item-wrapper.active .nav-item {
+          width: 50% !important;
+          border: 1px solid rgba(0, 0, 0, 0.4) !important;
+          background: rgba(0, 0, 0, 0.4) !important;
+        }
+
+        .slider-wrapper-section {
+          position: relative;
+          width: 100%;
+          flex: 1;
+          min-height: 600px;
+          overflow: hidden;
+        }
+
+        .bg-overlay-section {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(135deg, rgb(213, 183, 71), rgb(180, 150, 50));
+          filter: brightness(0.75);
+          opacity: 0.5;
+          z-index: 0;
+        }
+
+        .slides-section {
+          position: absolute !important;
+          top: 0 !important;
+          left: 0 !important;
+          width: 100% !important;
+          height: 100% !important;
+          display: flex !important;
+          justify-content: center !important;
+          align-items: center !important;
+          z-index: 1 !important;
+          user-select: none !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+
+        /* ALL SLIDES EQUAL BASE SIZE - SIDES SCALED TO 50% FROM EDGES */
+        .slide {
+          position: absolute !important;
+          top: 50% !important;
+          width: 40% !important;
+          max-width: none !important;
+          height: 60% !important;
+          display: flex !important;
+          justify-content: center !important;
+          align-items: center !important;
+          opacity: 0 !important;
+          pointer-events: none !important;
+          transition: opacity 1.5s cubic-bezier(0.071, 0.505, 0.192, 0.726) !important,
+                      filter 1.5s cubic-bezier(0.071, 0.505, 0.192, 0.726) !important,
+                      transform 1.5s cubic-bezier(0.071, 0.505, 0.192, 0.726) !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          border: none !important;
+          background: transparent !important;
+        }
+
+        .slide.active {
+          opacity: 1 !important;
+          left: 50% !important;
+          transform: translate(-50%, -50%) scale(1) !important;
+          z-index: 3 !important;
+          pointer-events: auto !important;
+        }
+
+        .slide.active:hover {
+          transform: translate(-50%, -50%) scale(1) !important;
+        }
+
+        /* LEFT SLIDE - 50% SCALE, STARTING FROM LEFT EDGE */
+        .slide.prev {
+          opacity: 0.6 !important;
+          left: 0 !important;
+          transform: translate(0, -50%) scale(0.5) !important;
+          transform-origin: left center !important;
+          z-index: 1 !important;
+          filter: grayscale(0.8) brightness(0.7) !important;
+          cursor: pointer !important;
+          pointer-events: auto !important;
+        }
+
+        .slide.prev:hover {
+          opacity: 0.8 !important;
+          transform: translate(0, -50%) scale(0.5) !important;
+        }
+
+        /* RIGHT SLIDE - 50% SCALE, STARTING FROM RIGHT EDGE */
+        .slide.next {
+          opacity: 0.6 !important;
+          left: auto !important;
+          right: 0 !important;
+          transform: translate(0, -50%) scale(0.5) !important;
+          transform-origin: right center !important;
+          z-index: 1 !important;
+          filter: grayscale(0.8) brightness(0.7) !important;
+          cursor: pointer !important;
+          pointer-events: auto !important;
+        }
+
+        .slide.next:hover {
+          opacity: 0.8 !important;
+          transform: translate(0, -50%) scale(0.5) !important;
+        }
+
+        /* UPDATED: Force all images to be same size with object-fit: cover */
+        .slide .img {
+          width: 100% !important;
+          height: 100% !important;
+          opacity: 0.85 !important;
+          overflow: hidden !important;
+          pointer-events: none !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          border: none !important;
+        }
+
+        .slide .img img {
+          width: 100% !important;
+          height: 100% !important;
+          object-fit: cover !important;
+          display: block !important;
+          pointer-events: none !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          border: none !important;
+        }
+
+        .slide-title-section {
+          position: absolute !important;
+          top: 15% !important;
+          left: 50% !important;
+          transform: translateX(-50%) !important;
+          width: 90% !important;
+          max-width: 1200px !important;
+          height: auto !important;
+          display: flex !important;
+          flex-direction: column !important;
+          justify-content: flex-start !important;
+          pointer-events: none !important;
+          z-index: 5 !important;
+          user-select: none !important;
+        }
+
+        .slide-title-row {
+          flex: none !important;
+          width: 100% !important;
+          display: flex !important;
+          justify-content: center !important;
+          align-items: center !important;
+          pointer-events: none !important;
+          height: auto !important;
+          min-height: 100px !important;
+        }
+
+        .letter {
+          flex: 1 !important;
+          height: 100% !important;
+          padding: 0 0.5em !important;
+          clip-path: polygon(0 0, 100% 0, 100% 100%, 0% 100%) !important;
+          overflow: hidden !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          pointer-events: none !important;
+          margin: 0 !important;
+          border: none !important;
+          background: transparent !important;
+        }
+
+        .letter span {
+          position: relative !important;
+          display: inline-block !important;
+          font-family: 'Melete', 'Space Grotesk', sans-serif !important;
+          font-size: 112.5px !important;
+          font-weight: 800 !important;
+          filter: brightness(0.25) saturate(0.75) !important;
+          line-height: 1 !important;
+          text-align: center !important;
+          pointer-events: none !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+
+        @media (max-width: 900px) {
+          .slider-nav-section {
+            width: 60%;
+            max-width: none;
+          }
+
+          .slide {
+            width: 50% !important;
+            height: 50% !important;
+          }
+
+          .slide.prev {
+            left: 0 !important;
+            transform: translate(0, -50%) scale(0.5) !important;
+            transform-origin: left center !important;
+          }
+
+          .slide.next {
+            left: auto !important;
+            right: 0 !important;
+            transform: translate(0, -50%) scale(0.5) !important;
+            transform-origin: right center !important;
+          }
+
+          .slide-title-section {
+            width: 95%;
+            height: 30%;
+          }
+
+          .letter span {
+            font-size: 75px;
+          }
+
+          .letter {
+            padding: 0 0.2em;
+          }
+        }
+
+        @media (max-width: 600px) {
+          .slider-wrapper-section {
+            min-height: 500px;
+          }
+
+          .slide {
+            width: 60% !important;
+            height: 45% !important;
+          }
+
+          .slide.prev,
+          .slide.next {
+            opacity: 0.4;
+          }
+
+          .slide.prev {
+            left: 0 !important;
+            transform: translate(0, -50%) scale(0.5) !important;
+            transform-origin: left center !important;
+          }
+
+          .slide.next {
+            left: auto !important;
+            right: 0 !important;
+            transform: translate(0, -50%) scale(0.5) !important;
+            transform-origin: right center !important;
+          }
+
+          .letter span {
+            font-size: 52.5px;
+          }
+        }
+      `}</style>
+    </section>
+  );
+};
