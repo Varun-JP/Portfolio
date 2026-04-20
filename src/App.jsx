@@ -1,20 +1,32 @@
-import { BrowserRouter, Routes, Route, useLocation, Navigate, useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
 import { Landing } from "./components/Landing";
 import { Home } from "./pages/Home";
 import { NotFound } from "./pages/NotFound";
 import { Toaster } from "./components/ui/toaster";
 import { LoadingScreen } from "./components/LoadingScreen";
+import { FluidSimulation } from "./components/FluidSimulation";
 
-// Wrapper component to handle landing page with reverse mode
+const FLUID_CONFIG = {
+  simResolution: 128,
+  dyeResolution: 512,
+  splatRadius: 0.15,
+  velocityDissipation: 0.88,
+  dyeDissipation: 0.87,
+  vorticity: 15,
+  pressureDissipation: 0.8,
+  pressureIterations: 20,
+  threshold: 0.03,
+  edgeSoftness: 0.01,
+  inkColor: [1, 1, 1],
+};
+
 function LandingWrapper() {
   const location = useLocation();
   const navigate = useNavigate();
   const playReverse = location.state?.playReverse || false;
 
   const handleReverseComplete = () => {
-    // After reverse animation completes, clear the state
-    // This resets the landing page to normal forward mode
     navigate('/', { replace: true, state: {} });
   };
 
@@ -23,15 +35,32 @@ function LandingWrapper() {
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
+  const fluidCanvasRef = useRef(null);
 
-  const handleLoadComplete = () => {
-    setIsLoading(false);
-  };
+  useEffect(() => {
+    if (!fluidCanvasRef.current) return;
+    new FluidSimulation(fluidCanvasRef.current, FLUID_CONFIG);
+  }, []);
 
   return (
     <>
+      {/* Global fluid canvas — sits above all pages */}
+      <canvas
+        ref={fluidCanvasRef}
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100vw",
+          height: "100vh",
+          zIndex: 9999,
+          pointerEvents: "none",
+          mixBlendMode: "difference",
+        }}
+      />
+
       <Toaster />
-      {isLoading && <LoadingScreen onLoadComplete={handleLoadComplete} />}
+      {isLoading && <LoadingScreen onLoadComplete={() => setIsLoading(false)} />}
       {!isLoading && (
         <BrowserRouter>
           <ScrollToTop />
@@ -46,17 +75,14 @@ function App() {
   );
 }
 
-// UPDATED: Only scroll to top when navigating TO landing page in forward mode (not reverse)
 function ScrollToTop() {
   const location = useLocation();
 
   useEffect(() => {
-    // Only force scroll to top when going to landing page WITHOUT reverse state
     if (location.pathname === '/' && !location.state?.playReverse) {
       window.scrollTo(0, 0);
       setTimeout(() => window.scrollTo(0, 0), 0);
     }
-    // For /home route, do nothing - let browser maintain scroll position
   }, [location.pathname, location.state]);
 
   return null;

@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Navbar } from "./Navbar";
 import gsap from "gsap";
 import { Observer } from "gsap/Observer";
+import { FluidSimulation } from "./FluidSimulation";
 
 // Register the Observer plugin
 gsap.registerPlugin(Observer);
@@ -28,21 +29,15 @@ const Typewriter = ({ text, speed = 150, deleteSpeed = 100, pause = 2000 }) => {
           : fullText.substring(0, displayText.length + 1)
       );
 
-      // Typing Speed Logic
       setTypingSpeed(isDeleting ? deleteSpeed : speed);
 
-      // Word Finished Typing
       if (!isDeleting && displayText === fullText) {
         timer = setTimeout(() => setIsDeleting(true), pause);
-      } 
-      // Word Finished Deleting
-      else if (isDeleting && displayText === "") {
+      } else if (isDeleting && displayText === "") {
         setIsDeleting(false);
         setLoopNum(loopNum + 1);
         timer = setTimeout(handleTyping, 500);
-      } 
-      // Continue Typing/Deleting
-      else {
+      } else {
         timer = setTimeout(handleTyping, typingSpeed);
       }
     };
@@ -59,6 +54,20 @@ const Typewriter = ({ text, speed = 150, deleteSpeed = 100, pause = 2000 }) => {
   );
 };
 
+const FLUID_CONFIG = {
+  simResolution: 128,
+  dyeResolution: 512,
+  splatRadius: 0.25,
+  velocityDissipation: 0.88,
+  dyeDissipation: 0.90,
+  vorticity: 15,
+  pressureDissipation: 0.8,
+  pressureIterations: 20,
+  threshold: 0.3,
+  edgeSoftness: 0.01,
+  inkColor: [1, 1, 1], // white ink — difference blend does the inversion
+};
+
 export const Landing = ({ playReverse = false, onReverseComplete }) => {
   const navigate = useNavigate();
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -66,7 +75,6 @@ export const Landing = ({ playReverse = false, onReverseComplete }) => {
   const MAX_PROGRESS = 1;
   const NAVIGATE_THRESHOLD = 0.98;
 
-  // Refs for Direct DOM Manipulation
   const containerRef = useRef(null);
   const zoomContainerRef = useRef(null);
   const vaTextRef = useRef(null);
@@ -74,12 +82,13 @@ export const Landing = ({ playReverse = false, onReverseComplete }) => {
   const unTextRef = useRef(null);
   const overlayRef = useRef(null);
   const scrollIndicatorRef = useRef(null);
+  const fluidCanvasRef = useRef(null);
+  const fluidSimRef = useRef(null);
 
-  // Animation State
   const progress = useRef({ value: playReverse ? MAX_PROGRESS : 0 });
   const targetProgress = useRef(playReverse ? MAX_PROGRESS : 0);
   const isNavigating = useRef(false);
-  const ctx = useRef(null); 
+  const ctx = useRef(null);
 
   // Detect dark mode
   useEffect(() => {
@@ -101,7 +110,6 @@ export const Landing = ({ playReverse = false, onReverseComplete }) => {
   // Lock body scroll only in forward mode
   useEffect(() => {
     if (playReverse) return;
-
     document.body.style.overflow = "hidden";
     document.body.style.height = "100vh";
     return () => {
@@ -110,11 +118,17 @@ export const Landing = ({ playReverse = false, onReverseComplete }) => {
     };
   }, [playReverse]);
 
-  // Keep body background in sync with landing background to avoid white flashes
+  // Keep body background in sync
   useEffect(() => {
-    const bgColor = isDarkMode ? "#000000" : "#f9fafb";
+    const bgColor = isDarkMode ? "#000000" : "#ffffff";
     document.body.style.backgroundColor = bgColor;
   }, [isDarkMode]);
+
+  // Mount FluidSimulation onto the canvas
+  useEffect(() => {
+    if (!fluidCanvasRef.current) return;
+    fluidSimRef.current = new FluidSimulation(fluidCanvasRef.current, FLUID_CONFIG);
+  }, []);
 
   // Main Animation Logic (GSAP)
   useLayoutEffect(() => {
@@ -122,49 +136,34 @@ export const Landing = ({ playReverse = false, onReverseComplete }) => {
       const render = () => {
         const p = progress.current.value;
 
-        // Visual calculations
         const scale = 1 + p * 20;
         const textOpacity = p < 0.6 ? 1 : Math.max(0, 1 - (p - 0.6) / 0.4);
         const overlayOpacity = p < 0.7 ? 0 : Math.min(1, (p - 0.7) / 0.3);
         const chromaticIntensity = Math.sin(p * Math.PI) * 3;
 
-        // Apply Scale
         if (zoomContainerRef.current) {
-          gsap.set(zoomContainerRef.current, {
-            scale: scale,
-            opacity: textOpacity,
-          });
+          gsap.set(zoomContainerRef.current, { scale, opacity: textOpacity });
         }
 
-        // Apply Overlay
         if (overlayRef.current) {
           gsap.set(overlayRef.current, { opacity: overlayOpacity });
         }
 
-        // Apply Indicator
         if (scrollIndicatorRef.current && !playReverse) {
           const indicatorOpacity = p < 0.2 ? 1 - p / 0.2 : 0;
           gsap.set(scrollIndicatorRef.current, { opacity: indicatorOpacity });
         }
 
-        // Apply Chromatic Aberration
         const redShadow = `${chromaticIntensity}px 0 0 rgba(255, 0, 0, 0.5)`;
         const cyanShadow = `${-chromaticIntensity}px 0 0 rgba(0, 255, 255, 0.5)`;
         const rGlow = `0 0 ${20 + p * 30}px rgba(168, 85, 247, 0.6)`;
         const rRed = `${chromaticIntensity * 1.5}px 0 0 rgba(255, 0, 0, 0.6)`;
         const rCyan = `${-chromaticIntensity * 1.5}px 0 0 rgba(0, 255, 255, 0.6)`;
 
-        if (vaTextRef.current) {
-          vaTextRef.current.style.textShadow = `${redShadow}, ${cyanShadow}`;
-        }
-        if (unTextRef.current) {
-          unTextRef.current.style.textShadow = `${redShadow}, ${cyanShadow}`;
-        }
-        if (rTextRef.current) {
-          rTextRef.current.style.textShadow = `${rRed}, ${rCyan}, ${rGlow}`;
-        }
+        if (vaTextRef.current) vaTextRef.current.style.textShadow = `${redShadow}, ${cyanShadow}`;
+        if (unTextRef.current) unTextRef.current.style.textShadow = `${redShadow}, ${cyanShadow}`;
+        if (rTextRef.current) rTextRef.current.style.textShadow = `${rRed}, ${rCyan}, ${rGlow}`;
 
-        // Navigation Trigger
         if (!playReverse && p >= NAVIGATE_THRESHOLD && !isNavigating.current) {
           isNavigating.current = true;
           setTimeout(() => navigate("/home"), 50);
@@ -200,7 +199,7 @@ export const Landing = ({ playReverse = false, onReverseComplete }) => {
             const delta = self.deltaY || self.velocityY;
             const sensitivity = isTouchLike ? 0.004 : 0.0035;
             const adjustedDelta = isTouchLike ? -delta : delta;
-            
+
             targetProgress.current = gsap.utils.clamp(
               0,
               MAX_PROGRESS,
@@ -234,8 +233,25 @@ export const Landing = ({ playReverse = false, onReverseComplete }) => {
         style={{
           backgroundColor: isDarkMode ? "#000000" : "#f9fafb",
           backfaceVisibility: "hidden",
+          isolation: "isolate", 
         }}
       >
+        {/* Fluid Simulation Canvas — sits above content, inverts via blend mode */}
+        <canvas
+          ref={fluidCanvasRef}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            zIndex: 40,
+            pointerEvents: "none",
+            mixBlendMode: "difference",
+            
+          }}
+        />
+
         <div
           ref={zoomContainerRef}
           style={{
@@ -246,7 +262,6 @@ export const Landing = ({ playReverse = false, onReverseComplete }) => {
             filter: "contrast(1.1) brightness(1.05)",
           }}
         >
-          {/* Top Text - UPDATED FOR SYMMETRY */}
           <div
             className={`font-medium tracking-wide select-none absolute left-2 -top-14 md:-top-[3.5vw] text-lg md:text-[1.5vw] ${
               isDarkMode ? "text-white/80" : "text-black/80"
@@ -255,30 +270,23 @@ export const Landing = ({ playReverse = false, onReverseComplete }) => {
             Hey I'm
           </div>
 
-          {/* Main Name */}
           <h1
             className={`text-[9.5vw] font-black leading-none tracking-tighter select-none flex font-Melete ${
               isDarkMode ? "text-white" : "text-black"
             }`}
           >
             <span ref={vaTextRef}>VA</span>
-            <span
-              ref={rTextRef}
-              className="relative text-purple-500"
-            >
+            <span ref={rTextRef} className="relative text-purple-500">
               R
             </span>
             <span ref={unTextRef}>UN</span>
           </h1>
 
-          {/* Bottom Text with Typewriter */}
           <div
             className={`font-medium tracking-wide select-none absolute right-2 -bottom-12 md:-bottom-[2.5vw] text-right text-lg md:text-[1.5vw] ${
               isDarkMode ? "text-white/80" : "text-black/80"
             }`}
-            style={{
-              minWidth: "300px"   // Prevents layout shifting
-            }}
+            style={{ minWidth: "300px" }}
           >
             <Typewriter text="I love" />
           </div>
