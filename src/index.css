@@ -2,9 +2,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&family=Space+Grotesk:wght@300;500;700&display=swap');
 @import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700;900&display=swap");
 @font-face {
-  font-family: "Melete";
-  src: url("/fonts/Melete/Melete-Bold.woff2") format("woff2"),
-       url("/fonts/Melete/Melete-Bold.woff") format("woff");
+  font-family: "Sinistre";
+  src: url("/fonts/Sinistre/Sinistre-Bold.woff2") format("woff2"),
+       url("/fonts/Sinistre/Sinistre-Bold.woff") format("woff");
   font-weight: 800;
   font-style: normal;
   font-display: swap;
@@ -476,8 +476,8 @@ html, body {
   font-family: "basteleur-master", system-ui, sans-serif !important;
 }
 
-.font-Melete {
-  font-family: "Melete", system-ui, sans-serif !important;
+.font-Sinistre {
+  font-family: "Sinistre", system-ui, sans-serif !important;
 }
 
 

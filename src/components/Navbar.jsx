@@ -91,7 +91,7 @@ export const Navbar = () => {
         // Trigger smooth reverse zoom by navigating with state
         navigate('/', { state: { playReverse: true } });
       } else {
-        navigate('/');
+        navigate('/', { replace: true, state: {} });
       }
     } else if (href.startsWith('#')) {
       // Hash navigation
@@ -134,17 +134,34 @@ export const Navbar = () => {
       <div className="hidden md:flex space-x-4 bg-background/30 backdrop-blur-md rounded-full px-4 py-2 shadow-sm">
         {navItems.map((item, key) => (
           <a
-            key={key}
-            href={item.href}
-            onClick={(e) => handleNavClick(e, item.href)}
-            className={cn(
-              "px-4 py-1 rounded-full transition-colors duration-300",
+
+  key={key}
+  href={item.href}
+  onClick={(e) => handleNavClick(e, item.href)}
+  className={cn(
+    "group px-4 py-1 rounded-full transition-colors duration-300",
               activeSection === item.href
-                ? "bg-purple-600 text-white font-semibold shadow-md"
-                : "text-foreground/80 hover:bg-purple-200 hover:text-purple-800"
+              ? "bg-amber-400 text-black font-semibold shadow-md"
+              : "text-foreground/80 hover:bg-amber-100 hover:text-amber-700"
             )}
           >
-            {item.name}
+<span className="relative flex overflow-hidden h-[1.2em]">
+  {item.name.split("").map((char, i) => {
+    const delay = `${(item.name.length - 1 - i) * 30}ms`;
+    return (
+      <span key={i} className="relative flex flex-col overflow-hidden h-[1.2em]">
+        <span className="translate-y-0 transition-transform duration-300 ease-in-out group-hover:-translate-y-full"
+          style={{ transitionDelay: delay }}>
+          {char}
+        </span>
+        <span className="absolute translate-y-full transition-transform duration-300 ease-in-out group-hover:translate-y-0"
+          style={{ transitionDelay: delay }}>
+          {char}
+        </span>
+      </span>
+    );
+  })}
+</span>
           </a>
         ))}
 
@@ -187,8 +204,8 @@ export const Navbar = () => {
             className={cn(
               "p-2 rounded-full transition-colors duration-300 flex items-center justify-center",
               activeSection === item.href
-                ? "bg-purple-600 text-white font-semibold shadow-md"
-                : "text-foreground/80 hover:bg-purple-200 hover:text-purple-800"
+                ? "bg-amber-400 text-black font-semibold shadow-md"
+                : "text-foreground/80 hover:bg-amber-100 hover:text-amber-700"
             )}
           >
             {item.icon}

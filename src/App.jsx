@@ -10,9 +10,9 @@ import { FluidSimulation } from "./components/FluidSimulation";
 const FLUID_CONFIG = {
   simResolution: 128,
   dyeResolution: 512,
-  splatRadius: 0.15,
+  splatRadius: 0.05,
   velocityDissipation: 0.88,
-  dyeDissipation: 0.87,
+  dyeDissipation: 0.3,
   vorticity: 15,
   pressureDissipation: 0.8,
   pressureIterations: 20,
@@ -27,6 +27,7 @@ function LandingWrapper() {
   const playReverse = location.state?.playReverse || false;
 
   const handleReverseComplete = () => {
+    // Just clear the playReverse state, don't navigate away
     navigate('/', { replace: true, state: {} });
   };
 
@@ -79,11 +80,15 @@ function ScrollToTop() {
   const location = useLocation();
 
   useEffect(() => {
-    if (location.pathname === '/' && !location.state?.playReverse) {
-      window.scrollTo(0, 0);
-      setTimeout(() => window.scrollTo(0, 0), 0);
-    }
-  }, [location.pathname, location.state]);
+    // Don't scroll on reverse animation
+    if (location.state?.playReverse) return;
+    // Don't scroll on hash navigation (section scrolling)
+    if (location.hash) return;
+    // Don't force scroll on landing page — Landing manages its own scroll lock
+    if (location.pathname === '/') return;
+
+    window.scrollTo(0, 0);
+  }, [location.pathname, location.hash, location.state]);
 
   return null;
 }
