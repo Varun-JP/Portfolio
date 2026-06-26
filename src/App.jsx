@@ -1,96 +1,39 @@
-import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
+import { BrowserRouter } from "react-router-dom";
 import { Landing } from "./components/Landing";
 import { Home } from "./pages/Home";
-import { NotFound } from "./pages/NotFound";
 import { Toaster } from "./components/ui/toaster";
 import { LoadingScreen } from "./components/LoadingScreen";
-import { FluidSimulation } from "./components/FluidSimulation";
-
-const FLUID_CONFIG = {
-  simResolution: 128,
-  dyeResolution: 512,
-  splatRadius: 0.05,
-  velocityDissipation: 0.88,
-  dyeDissipation: 0.3,
-  vorticity: 15,
-  pressureDissipation: 0.8,
-  pressureIterations: 20,
-  threshold: 0.03,
-  edgeSoftness: 0.01,
-  inkColor: [1, 1, 1],
-};
-
-function LandingWrapper() {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const playReverse = location.state?.playReverse || false;
-
-  const handleReverseComplete = () => {
-    // Just clear the playReverse state, don't navigate away
-    navigate('/', { replace: true, state: {} });
-  };
-
-  return <Landing playReverse={playReverse} onReverseComplete={handleReverseComplete} />;
-}
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
-  const fluidCanvasRef = useRef(null);
+  const [phase, setPhase]         = useState("forward");
 
-  useEffect(() => {
-    if (!fluidCanvasRef.current) return;
-    new FluidSimulation(fluidCanvasRef.current, FLUID_CONFIG);
-  }, []);
+  const handlePortalComplete  = () => setPhase("hidden");
+  const handleScrollToTop     = () => { if (phase === "hidden") setPhase("reverse"); };
+  const handleReverseComplete = () => setPhase("forward");
 
   return (
-    <>
-      {/* Global fluid canvas — sits above all pages */}
-      <canvas
-        ref={fluidCanvasRef}
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          width: "100vw",
-          height: "100vh",
-          zIndex: 9999,
-          pointerEvents: "none",
-          mixBlendMode: "difference",
-        }}
-      />
-
+    <BrowserRouter>
       <Toaster />
       {isLoading && <LoadingScreen onLoadComplete={() => setIsLoading(false)} />}
       {!isLoading && (
-        <BrowserRouter>
-          <ScrollToTop />
-          <Routes>
-            <Route path="/" element={<LandingWrapper />} />
-            <Route path="/home" element={<Home />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+        <>
+          {/* Home always in DOM at z-index 0 — visible once Landing fades out */}
+          <div style={{ position: "relative", zIndex: 0 }}>
+            <Home onScrollToTop={handleScrollToTop} />
+          </div>
+
+          {/* Landing fixed overlay — fades out on portal, back in on dezoom */}
+          <Landing
+            phase={phase}
+            onComplete={handlePortalComplete}
+            onReverseComplete={handleReverseComplete}
+          />
+        </>
       )}
-    </>
+    </BrowserRouter>
   );
-}
-
-function ScrollToTop() {
-  const location = useLocation();
-
-  useEffect(() => {
-    // Don't scroll on reverse animation
-    if (location.state?.playReverse) return;
-    // Don't scroll on hash navigation (section scrolling)
-    if (location.hash) return;
-    // Don't force scroll on landing page — Landing manages its own scroll lock
-    if (location.pathname === '/') return;
-
-    window.scrollTo(0, 0);
-  }, [location.pathname, location.hash, location.state]);
-
-  return null;
 }
 
 export default App;
