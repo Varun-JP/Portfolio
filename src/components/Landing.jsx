@@ -82,58 +82,71 @@ const FLUID_CONFIG = {
   threshold: 0.3, edgeSoftness: 0.01, inkColor: [1, 1, 1],
 };
 
-// ── AboutPlane (3D floating screen inside the tunnel) ────────────────────────
-// Starts as a tiny, tilted, near-invisible card deep in the tunnel (~p=0.55).
-// As the camera flies forward it grows, de-tilts, and becomes fully opaque —
-// like a real screen revealed at the end of a corridor (see reference images).
+// ── AboutPlane ────────────────────────────────────────────────────────────────
+// Swivels left/right around its own centre axis only.
+// Rotation is damped (lerp) so it eases toward the mouse — no snapping,
+// no vertical tilt, no position drift.
 function AboutPlane({ textureData, progress, mouseRef }) {
   const meshRef     = useRef(null);
   const materialRef = useRef(null);
+  const gateRef     = useRef({ opened: false, atProgress: 0 });
+  const rotYRef     = useRef(0); // current damped rotation
   const { camera }  = useThree();
 
   const { texture, width, height } = textureData;
-  // Final (full) size of the screen at p=1
-  const planeHeightFull = 1.6;
-  const planeWidthFull  = planeHeightFull * (width / height);
+  const planeHeight = 1.5;
+  const planeWidth  = planeHeight * (width / height);
 
   useFrame(() => {
     const p = progress.current.value;
-    const m = mouseRef?.current ?? { x: 0, y: 0 };
 
-    // ── visibility window: appears from p=0.55, fully opaque at p=0.93 ──────
-    const APPEAR_START = 0.55;
-    const APPEAR_END   = 0.93;
-    const rawRamp      = gsap.utils.clamp(0, 1, (p - APPEAR_START) / (APPEAR_END - APPEAR_START));
+    // ── gate: don't show until the hole is big enough on screen ──
+    let minY = Infinity, maxY = -Infinity;
+    const v = new THREE.Vector3();
+    for (const point of HOLE_TRI_WORLD) {
+      v.copy(point).project(camera);
+      if (v.y < minY) minY = v.y;
+      if (v.y > maxY) maxY = v.y;
+    }
+    if (!gateRef.current.opened && (maxY - minY) >= 1.2) {
+      gateRef.current.opened     = true;
+      gateRef.current.atProgress = p;
+    }
 
-    // Ease the ramp so it starts slow and accelerates
-    const ramp = rawRamp * rawRamp;
+    let progressRamp = 0;
+    if (gateRef.current.opened) {
+      const span = Math.max(0.0001, 1 - gateRef.current.atProgress);
+      progressRamp = gsap.utils.clamp(0, 1, (p - gateRef.current.atProgress) / span);
+    }
 
-    if (!meshRef.current || !materialRef.current) return;
+    if (meshRef.current) {
+      const m = mouseRef?.current ?? { x: 0, y: 0 };
 
-    // ── opacity: 0 → 1 over the ramp, mouse only nudges when visible ─────
-    materialRef.current.opacity = ramp;
+      // Damped Y rotation — lerp toward target, locked to horizontal axis only
+      const targetY = m.x * 0.25;           // max ±~14° swivel
+      rotYRef.current += (targetY - rotYRef.current) * 0.06; // damping factor
+      meshRef.current.rotation.y = rotYRef.current;
+      meshRef.current.rotation.x = 0;       // no vertical tilt ever
 
-    // ── tilt: starts strongly tilted, flattens to face camera at end ──────
-    // At ramp=0: rotY = ~25°, rotX = ~10° (dramatic angle like reference img 3)
-    // At ramp=1: rotY = small mouse parallax only, rotX = 0
-    const baseTiltY = THREE.MathUtils.degToRad(25) * (1 - ramp);
-    const baseTiltX = THREE.MathUtils.degToRad(10) * (1 - ramp);
-    meshRef.current.rotation.y = baseTiltY + m.x * 0.25 * ramp;
-    meshRef.current.rotation.x = -baseTiltX + m.y * 0.15 * ramp;
+      // Opacity gated by how directly camera faces the plane
+      const viewDir     = new THREE.Vector3();
+      camera.getWorldDirection(viewDir);
+      const planeNormal = new THREE.Vector3(0, 0, 1).applyQuaternion(meshRef.current.quaternion);
+      const alignment   = -viewDir.dot(planeNormal);
+      const angleFactor = gsap.utils.clamp(0, 1, (alignment - 0.5) / (0.92 - 0.5));
+      const nearEnd     = gsap.utils.clamp(0, 1, (p - 0.93) / 0.06);
 
-    // ── scale: starts small (0.15×), grows to full 1× at ramp=1 ──────────
-    const scaleFactor = 0.15 + 0.85 * ramp;
-    meshRef.current.scale.set(scaleFactor, scaleFactor, 1);
-
-    // ── z position: plane starts far away, moves slightly toward camera ───
-    // ABOUT_Z is the base; we push it a little closer as we near the end
-    const zOffset = (1 - ramp) * (-0.8);
-    meshRef.current.position.set(HOLE_X, HOLE_Y, ABOUT_Z + zOffset);
+      if (materialRef.current)
+        materialRef.current.opacity = Math.max(
+          progressRamp * angleFactor,
+          progressRamp * nearEnd
+        );
+    }
   });
 
   return (
     <mesh ref={meshRef} position={[HOLE_X, HOLE_Y, ABOUT_Z]}>
-      <planeGeometry args={[planeWidthFull, planeHeightFull]} />
+      <planeGeometry args={[planeWidth, planeHeight]} />
       <meshBasicMaterial
         ref={materialRef}
         map={texture}
@@ -147,6 +160,7 @@ function AboutPlane({ textureData, progress, mouseRef }) {
 }
 
 // ── TunnelR ───────────────────────────────────────────────────────────────────
+// Camera moves only along Z (scroll-driven). X/Y are fixed — no mouse panning.
 function TunnelR({ progress, aboutTexture, mouseRef }) {
   const svg        = useLoader(SVGLoader, "/models/fixed_R.svg");
   const { camera } = useThree();
@@ -183,13 +197,9 @@ function TunnelR({ progress, aboutTexture, mouseRef }) {
 
   useFrame(() => {
     const p = progress.current.value;
-    const m = mouseRef?.current ?? { x: 0, y: 0 };
 
-    camera.position.set(
-      CAM_X + m.x * 0.15,
-      CAM_Y - m.y * 0.15,
-      CAM_START - p * CAM_TRAVEL
-    );
+    // Camera fixed in X/Y — only Z moves with scroll
+    camera.position.set(CAM_X, CAM_Y, CAM_START - p * CAM_TRAVEL);
     camera.lookAt(CAM_X, CAM_Y, GROUP_Z);
 
     const tunnelOpacity = 1 - gsap.utils.clamp(0, 1, (p - 0.92) / 0.07);
@@ -220,10 +230,6 @@ function TunnelR({ progress, aboutTexture, mouseRef }) {
 }
 
 // ── Landing ───────────────────────────────────────────────────────────────────
-// Props:
-//   phase             — 'forward' | 'hidden' | 'reverse'  (controlled by App)
-//   onComplete        — called when the about-page dismiss fades out
-//   onReverseComplete — called when reverse animation finishes
 export const Landing = ({ phase, onComplete, onReverseComplete }) => {
   const [isDarkMode, setIsDarkMode]     = useState(false);
   const [aboutTexture, setAboutTexture] = useState(null);
@@ -241,7 +247,6 @@ export const Landing = ({ phase, onComplete, onReverseComplete }) => {
   const fluidCanvasRef     = useRef(null);
   const fluidSimRef        = useRef(null);
   const canvasWrapperRef   = useRef(null);
-  // captureRef — hidden off-screen, used ONLY for html2canvas → 3D texture
   const aboutCaptureRef    = useRef(null);
   const mouseRef           = useRef({ x: 0, y: 0 });
   const progress           = useRef({ value: 0 });
@@ -268,7 +273,7 @@ export const Landing = ({ phase, onComplete, onReverseComplete }) => {
     fluidSimRef.current = new FluidSimulation(fluidCanvasRef.current, FLUID_CONFIG);
   }, []);
 
-  // ── mouse parallax ────────────────────────────────────────────────────────
+  // ── mouse tracking ────────────────────────────────────────────────────────
   useEffect(() => {
     const handleMove = (e) => {
       mouseRef.current.x = (e.clientX / window.innerWidth)  * 2 - 1;
@@ -283,7 +288,6 @@ export const Landing = ({ phase, onComplete, onReverseComplete }) => {
     let cancelled = false;
     const capture = async () => {
       if (!aboutCaptureRef.current) return;
-      // Wait two frames so fonts/images have loaded
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
       const canvas = await html2canvas(aboutCaptureRef.current, {
         backgroundColor: "#ffffff",
@@ -314,16 +318,15 @@ export const Landing = ({ phase, onComplete, onReverseComplete }) => {
     });
   };
 
-  // ── render frame (drives all opacity/scale via scroll progress) ───────────
+  // ── render frame ──────────────────────────────────────────────────────────
   const renderFrame = () => {
     const p = progress.current.value;
 
-    const scale        = 1 + p * 20;
-    const textOpacity  = p < 0.45 ? 1 : Math.max(0, 1 - (p - 0.45) / 0.15);
+    const scale         = 1 + p * 20;
+    const textOpacity   = p < 0.45 ? 1 : Math.max(0, 1 - (p - 0.45) / 0.15);
     const canvasOpacity = p < 0.60 ? 0 : Math.min(1, (p - 0.60) / 0.07);
-    const rFlatOpacity = p < 0.38 ? 1 : Math.max(0, 1 - (p - 0.38) / 0.10);
-
-    // About overlay removed — About content lives purely in the 3D plane inside the tunnel
+    const rFlatOpacity  = p < 0.38 ? 1 : Math.max(0, 1 - (p - 0.38) / 0.10);
+    const fluidOpacity  = p < 0.35 ? 1 : Math.max(0, 1 - (p - 0.35) / 0.12);
 
     const ca         = Math.sin(p * Math.PI) * 3;
     const redShadow  = `${ca}px 0 0 rgba(255,0,0,0.5)`;
@@ -334,7 +337,8 @@ export const Landing = ({ phase, onComplete, onReverseComplete }) => {
       gsap.set(zoomContainerRef.current, { scale, opacity: textOpacity });
     if (canvasWrapperRef.current)
       gsap.set(canvasWrapperRef.current, { opacity: canvasOpacity });
-
+    if (fluidCanvasRef.current)
+      gsap.set(fluidCanvasRef.current, { opacity: fluidOpacity });
     if (vaTextRef.current)
       vaTextRef.current.style.textShadow = `${redShadow}, ${cyanShadow}`;
     if (unTextRef.current)
@@ -347,19 +351,11 @@ export const Landing = ({ phase, onComplete, onReverseComplete }) => {
     if (scrollIndicatorRef.current)
       gsap.set(scrollIndicatorRef.current, { opacity: p < 0.15 ? 1 - p / 0.15 : 0 });
 
-    // Portal: tunnel is done — next scroll dismisses landing and reveals Home
     if (p >= FADE_THRESHOLD && !portalFiredRef.current) {
       portalFiredRef.current = true;
-
-      if (observerRef.current) {
-        observerRef.current.kill();
-        observerRef.current = null;
-      }
-
+      if (observerRef.current) { observerRef.current.kill(); observerRef.current = null; }
       document.body.style.overflow = "";
       document.body.style.height   = "";
-
-      // Brief pause so the screen fully appears before accepting dismiss scroll
       setTimeout(() => {
         const onDismiss = () => {
           window.removeEventListener("wheel",      onDismiss);
@@ -368,16 +364,13 @@ export const Landing = ({ phase, onComplete, onReverseComplete }) => {
         };
         window.addEventListener("wheel",      onDismiss, { once: true });
         window.addEventListener("touchstart", onDismiss, { once: true });
-      }, 600);
+      }, 500);
     }
   };
 
-  // ── scroll observer (forward mode) ────────────────────────────────────────
+  // ── scroll observer ───────────────────────────────────────────────────────
   const startObserver = () => {
-    if (observerRef.current) {
-      observerRef.current.kill();
-      observerRef.current = null;
-    }
+    if (observerRef.current) { observerRef.current.kill(); observerRef.current = null; }
     observerRef.current = Observer.create({
       target:         window,
       type:           "wheel,touch,pointer",
@@ -405,7 +398,7 @@ export const Landing = ({ phase, onComplete, onReverseComplete }) => {
     });
   };
 
-  // ── phase changes from App ─────────────────────────────────────────────────
+  // ── phase changes ─────────────────────────────────────────────────────────
   useEffect(() => {
     const wrap = landingWrapRef.current;
     if (!wrap) return;
@@ -420,13 +413,10 @@ export const Landing = ({ phase, onComplete, onReverseComplete }) => {
       wrap.style.opacity       = "1";
       document.body.style.overflow = "hidden";
       document.body.style.height   = "100vh";
-
       progress.current.value = MAX_PROGRESS;
       targetProgress.current = MAX_PROGRESS;
       portalFiredRef.current = false;
-
       if (observerRef.current) { observerRef.current.kill(); observerRef.current = null; }
-
       gsap.to(progress.current, {
         value:    0,
         duration: 1.5,
@@ -473,7 +463,7 @@ export const Landing = ({ phase, onComplete, onReverseComplete }) => {
     >
       <Navbar />
 
-      {/* ── Off-screen About snapshot — html2canvas only, never visible ── */}
+      {/* Off-screen About snapshot — html2canvas only, never visible */}
       <div
         ref={aboutCaptureRef}
         aria-hidden="true"
@@ -524,11 +514,11 @@ export const Landing = ({ phase, onComplete, onReverseComplete }) => {
         <div
           ref={zoomContainerRef}
           style={{
-            willChange:    "transform, opacity",
-            position:      "absolute",
-            zIndex:        15,
+            willChange:      "transform, opacity",
+            position:        "absolute",
+            zIndex:          15,
             transformOrigin: "48% 32%",
-            filter:        "contrast(1.1) brightness(1.05)",
+            filter:          "contrast(1.1) brightness(1.05)",
           }}
         >
           <div className={`font-medium tracking-wide select-none absolute left-2 -top-14 md:-top-[3.5vw] text-lg md:text-[1.5vw] ${isDarkMode ? "text-white/80" : "text-black/80"}`}>
