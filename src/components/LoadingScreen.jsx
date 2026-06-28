@@ -12,50 +12,51 @@ export const LoadingScreen = ({ onLoadComplete }) => {
   useEffect(() => {
     const loadAssets = async () => {
       try {
-        // Wait for all fonts to be ready
+        // ── Fonts ────────────────────────────────────────────────────────────
         await document.fonts.ready;
-        
-        // CRITICAL: Explicitly check if Melete font is loaded
+
         const meleteFont = new FontFace(
           'Melete',
           'url(/fonts/Melete/Melete-Bold.woff2) format("woff2"), url(/fonts/Melete/Melete-Bold.woff) format("woff")',
           { weight: '800', style: 'normal' }
         );
-        
         try {
           await meleteFont.load();
           document.fonts.add(meleteFont);
         } catch (fontError) {
           console.warn('Melete font failed to load:', fontError);
         }
-        
-        // Double check all fonts are truly ready
+
         await document.fonts.ready;
-        
-        // Load GSAP if needed
+
+        // ── Three.js / R3F chunks — import eagerly so Vite splits are warm ──
+        // These are the same imports Landing.jsx uses; hitting them here means
+        // the browser has already parsed + executed the modules by the time
+        // the Canvas mounts, so there's no cold-start stall on the 3D scene.
+        await Promise.all([
+          import('three'),
+          import('@react-three/fiber'),
+          import('@react-three/postprocessing'),
+          import('three/examples/jsm/loaders/SVGLoader'),
+        ]);
+
+        // ── Preload the R SVG so SVGLoader gets a cache hit ──────────────────
+        // We fetch it as text and stash it; the browser's HTTP cache will
+        // serve it instantly when SVGLoader does its own fetch() later.
+        try {
+          await fetch('/models/fixed_R.svg');
+        } catch (svgError) {
+          console.warn('SVG preload failed:', svgError);
+        }
+
+        // ── GSAP ─────────────────────────────────────────────────────────────
         if (!window.gsap) {
           await import('gsap');
-          await import('gsap/ScrollTrigger');
         }
-        
-        // Check for Spline viewer
-        if (!customElements.get('spline-viewer')) {
-          await new Promise((resolve) => {
-            const checkSpline = setInterval(() => {
-              if (customElements.get('spline-viewer')) {
-                clearInterval(checkSpline);
-                resolve();
-              }
-            }, 100);
-            setTimeout(() => {
-              clearInterval(checkSpline);
-              resolve();
-            }, 5000);
-          });
-        }
-        
-        // Extra delay to ensure font rendering is complete
-        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Small buffer to let the GPU driver finish any lazy init
+        await new Promise(resolve => setTimeout(resolve, 300));
+
         setAssetsLoaded(true);
       } catch (error) {
         console.warn('Some assets failed to preload:', error);
@@ -67,15 +68,11 @@ export const LoadingScreen = ({ onLoadComplete }) => {
 
     function updateCounter() {
       if (counterRef.current >= 100) {
-        if (intervalRef.current) {
-          clearInterval(intervalRef.current);
-        }
+        if (intervalRef.current) clearInterval(intervalRef.current);
         if (assetsLoaded) {
           setTimeout(() => {
             setIsAnimatingOut(true);
-            setTimeout(() => {
-              onLoadComplete();
-            }, 2000);
+            setTimeout(() => onLoadComplete(), 2000);
           }, 500);
         }
         return;
@@ -90,9 +87,7 @@ export const LoadingScreen = ({ onLoadComplete }) => {
     updateCounter();
 
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
+      if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, []);
 
@@ -100,9 +95,7 @@ export const LoadingScreen = ({ onLoadComplete }) => {
     if (counter === 100 && assetsLoaded && !isAnimatingOut) {
       setTimeout(() => {
         setIsAnimatingOut(true);
-        setTimeout(() => {
-          onLoadComplete();
-        }, 2000);
+        setTimeout(() => onLoadComplete(), 2000);
       }, 500);
     }
   }, [counter, assetsLoaded, isAnimatingOut, onLoadComplete]);

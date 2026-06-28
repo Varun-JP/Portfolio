@@ -6,11 +6,24 @@ import { Toaster } from "./components/ui/toaster";
 import { LoadingScreen } from "./components/LoadingScreen";
 
 function App() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [phase, setPhase]         = useState("forward");
+  const [isLoading, setIsLoading]       = useState(true);
+  const [phase, setPhase]               = useState("forward");
+  const [aboutTexture, setAboutTexture] = useState(null);
 
-  const handlePortalComplete  = () => setPhase("hidden");
-  const handleScrollToTop     = () => { if (phase === "hidden") setPhase("reverse"); };
+  const handlePortalComplete = () => {
+    setPhase("hidden");
+    document.body.style.overflow = "";
+    document.body.style.height   = "";
+  };
+
+  const handleScrollToTop = () => {
+    if (phase === "hidden") {
+      document.body.style.overflow = "hidden";
+      document.body.style.height   = "100vh";
+      setPhase("reverse");
+    }
+  };
+
   const handleReverseComplete = () => setPhase("forward");
 
   return (
@@ -19,16 +32,16 @@ function App() {
       {isLoading && <LoadingScreen onLoadComplete={() => setIsLoading(false)} />}
       {!isLoading && (
         <>
-          {/* Home always in DOM at z-index 0 — visible once Landing fades out */}
           <div style={{ position: "relative", zIndex: 0 }}>
-            <Home onScrollToTop={handleScrollToTop} />
+            <Home onScrollToTop={handleScrollToTop} aboutTexture={aboutTexture} />
           </div>
 
-          {/* Landing fixed overlay — fades out on portal, back in on dezoom */}
+          {/* Landing passes its captured texture up so Home can reuse it */}
           <Landing
             phase={phase}
             onComplete={handlePortalComplete}
             onReverseComplete={handleReverseComplete}
+            onTextureReady={setAboutTexture}
           />
         </>
       )}
