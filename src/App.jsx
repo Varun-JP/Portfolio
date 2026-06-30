@@ -4,45 +4,44 @@ import { Landing } from "./components/Landing";
 import { Home } from "./pages/Home";
 import { Toaster } from "./components/ui/toaster";
 import { LoadingScreen } from "./components/LoadingScreen";
+import { useGlobalFluid } from "./components/useGlobalFluid";
 
 function App() {
-  const [isLoading, setIsLoading]       = useState(true);
-  const [phase, setPhase]               = useState("forward");
-  const [aboutTexture, setAboutTexture] = useState(null);
-
-  const handlePortalComplete = () => {
-    setPhase("hidden");
-    document.body.style.overflow = "";
-    document.body.style.height   = "";
-  };
-
-  const handleScrollToTop = () => {
-    if (phase === "hidden") {
-      document.body.style.overflow = "hidden";
-      document.body.style.height   = "100vh";
-      setPhase("reverse");
-    }
-  };
-
-  const handleReverseComplete = () => setPhase("forward");
+  const [isLoading, setIsLoading] = useState(true);
+  const fluidCanvasRef = useGlobalFluid();
 
   return (
     <BrowserRouter>
+      {/*
+        zIndex 16 — above the 2D VARUN text (z:15) so exclusion blending
+        works on the typography, but BELOW the 3D canvas wrapper (z:17).
+        The WebGL canvas is alpha:true so the fluid shows through its
+        transparent background — it just won't blend with the 3D R geometry,
+        which prevents the white+amber→blue artifact.
+      */}
+      <canvas
+        ref={fluidCanvasRef}
+        style={{
+          position:      "fixed",
+          top:           0,
+          left:          0,
+          width:         "100%",
+          height:        "100%",
+          zIndex:        16,
+          pointerEvents: "none",
+          mixBlendMode:  "exclusion",
+        }}
+      />
+
       <Toaster />
+
       {isLoading && <LoadingScreen onLoadComplete={() => setIsLoading(false)} />}
       {!isLoading && (
         <>
-          <div style={{ position: "relative", zIndex: 0 }}>
-            <Home onScrollToTop={handleScrollToTop} aboutTexture={aboutTexture} />
+          <Landing />
+          <div style={{ marginTop: "-100vh" }}>
+            <Home />
           </div>
-
-          {/* Landing passes its captured texture up so Home can reuse it */}
-          <Landing
-            phase={phase}
-            onComplete={handlePortalComplete}
-            onReverseComplete={handleReverseComplete}
-            onTextureReady={setAboutTexture}
-          />
         </>
       )}
     </BrowserRouter>

@@ -134,7 +134,7 @@ export class FluidSimulation {
   }
 
   _setupInput() {
-    this.pointers = [{ id: -1, x: 0, y: 0, dx: 0, dy: 0, down: true, moved: false, color: [1, 1, 1] }];
+    this.pointers = [{ id: -1, x: window.innerWidth / 2, y: window.innerHeight / 2, dx: 0, dy: 0, down: true, moved: false, color: [1, 1, 1] }];
   
     window.addEventListener("mousemove", (e) => {
       const p = this.pointers[0];
