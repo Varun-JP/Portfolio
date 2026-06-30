@@ -9,7 +9,7 @@ import * as THREE from "three";
 import html2canvas from "html2canvas";
 import { AboutPreview } from "./AboutPreview";
 import { EffectComposer, Bloom, Selection, Select } from "@react-three/postprocessing";
-
+import { AlphaMask } from "./AlphaMask";
 // ── 3D constants ──────────────────────────────────────────────────────────────
 const GROUP_Z    = -3.5;
 const CAM_START  =  5.5;
