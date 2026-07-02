@@ -36,16 +36,17 @@ export class FluidSimulation {
     this.scene.add(this.quad);
   }
 
-  _setupTargets() {
-    const { simResolution: simRes, dyeResolution: dyeRes } = this.config;
-    const aspect = this.width / this.height;
-    const options = { 
-        type: THREE.HalfFloatType, 
-        format: THREE.RGBAFormat, 
-        depthBuffer: false,
-        minFilter: THREE.LinearFilter,
-        magFilter: THREE.LinearFilter
-    };
+
+_setupTargets() {
+  const { simResolution: simRes, dyeResolution: dyeRes } = this.config;
+  const aspect = this.width / this.height;
+  const options = {
+      type: THREE.HalfFloatType,
+      format: THREE.RGBAFormat,
+      depthBuffer: false,
+      minFilter: THREE.LinearFilter,
+      magFilter: THREE.LinearFilter
+  };
 
     const single = (w, h) => new THREE.WebGLRenderTarget(w, h, options);
     const double = (w, h) => ({
@@ -66,8 +67,23 @@ export class FluidSimulation {
     this.divergence = single(this.simSize.w, this.simSize.h);
     this.curl = single(this.simSize.w, this.simSize.h);
     this.pressure = double(this.simSize.w, this.simSize.h);
-  }
 
+    this._clearAllTargets();
+  }
+_clearAllTargets() {
+  const targets = [
+    this.velocity.read, this.velocity.write,
+    this.dye.read, this.dye.write,
+    this.divergence,
+    this.curl,
+    this.pressure.read, this.pressure.write,
+  ];
+  targets.forEach((t) => {
+    this.renderer.setRenderTarget(t);
+    this.renderer.clear(true, true, true);
+  });
+  this.renderer.setRenderTarget(null);
+}
   _setupMaterials() {
     const make = ([vert, frag], uniforms) =>
       new THREE.ShaderMaterial({
@@ -136,20 +152,28 @@ export class FluidSimulation {
   _setupInput() {
     this.pointers = [{ id: -1, x: window.innerWidth / 2, y: window.innerHeight / 2, dx: 0, dy: 0, down: true, moved: false, color: [1, 1, 1] }];
   
-    window.addEventListener("mousemove", (e) => {
-      const p = this.pointers[0];
-      p.dx = (e.clientX - p.x) * 5.0;
-      p.dy = (e.clientY - p.y) * 5.0;
-      p.x = e.clientX;
-      p.y = e.clientY;
-      p.color = [1, 1, 1];
-      p.moved = true;
-    });
+ const MAX_DELTA = 40; // px, per-axis cap — stops teleport-jumps from blowing up the sim
 
-    window.addEventListener("mouseup", () => {
-      this.pointers[0].down = false;
-    });
-  }
+  window.addEventListener("mousemove", (e) => {
+    const p = this.pointers[0];
+    let rawDx = e.clientX - p.x;
+    let rawDy = e.clientY - p.y;
+
+    rawDx = Math.max(-MAX_DELTA, Math.min(MAX_DELTA, rawDx));
+    rawDy = Math.max(-MAX_DELTA, Math.min(MAX_DELTA, rawDy));
+
+    p.dx = rawDx * 5.0;
+    p.dy = rawDy * 5.0;
+    p.x = e.clientX;
+    p.y = e.clientY;
+    p.color = [1, 1, 1];
+    p.moved = true;
+  });
+
+  window.addEventListener("mouseup", () => {
+    this.pointers[0].down = false;
+  });
+}
 
   _pass(material, target) {
     this.quad.material = material;
@@ -176,10 +200,14 @@ export class FluidSimulation {
   }
 
   _loop() {
-    const step = () => {
-      const dt = 1.0 / 60.0;
-      const { advection: adv, divergence: div, curl: crl, vorticity: vor, pressure: pre, gradientSubtract: gra, clear, display } = this.material;
-      const simTexel = new THREE.Vector2(1.0 / this.simSize.w, 1.0 / this.simSize.h);
+    let lastTime = performance.now();
+ const step = () => {
+    const now = performance.now();
+    const dt = Math.min((now - lastTime) / 1000, 1 / 30); // cap at 1/30s so a stall doesn't overdrive advection
+    lastTime = now;
+
+    const { advection: adv, divergence: div, curl: crl, vorticity: vor, pressure: pre, gradientSubtract: gra, clear, display } = this.material;
+    const simTexel = new THREE.Vector2(1.0 / this.simSize.w, 1.0 / this.simSize.h);
 
       // Input
       this.pointers.forEach((p) => {

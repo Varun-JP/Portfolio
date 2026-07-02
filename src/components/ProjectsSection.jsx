@@ -132,22 +132,22 @@ function ScrambleTitle({ title, isActive, projectIndex, onHoverChange }) {
 
     letterEls.current.forEach((el, i) => {
       if (!el) return;
-      const cycles = MIN_CYCLES + Math.floor(Math.random() * (MAX_CYCLES - MIN_CYCLES + 1));
+      //const cycles = MIN_CYCLES + Math.floor(Math.random() * (MAX_CYCLES - MIN_CYCLES + 1));
 
       const startDelay = i * STAGGER_IN_MS;
       const startTimeout = setTimeout(() => {
-        let tick = 0;
+        //let tick = 0;
         const runTick = () => {
           if (!isHovering.current) return;
-          if (tick >= cycles) {
-            // Settle on a final (slightly randomized) font and stop — no infinite flicker.
-            const settled = randomFont();
-            setLetterFont(el, settled.family, settled.weight);
-            return;
-          }
+          // if (tick >= cycles) {
+          //   // Settle on a final (slightly randomized) font and stop — no infinite flicker.
+          //   const settled = randomFont();
+          //   setLetterFont(el, settled.family, settled.weight);
+          //   return;
+          // }
           const next = randomFont();
           setLetterFont(el, next.family, next.weight);
-          tick++;
+          //tick++;
           const t = setTimeout(runTick, TICK_MS);
           timeoutsRef.current.push(t);
         };
@@ -254,7 +254,8 @@ export const ProjectsSection = () => {
     return () => st.kill();
   }, []);
 
-  // Ghost / unghost rows on active change
+  // Ghost / unghost rows on active change, with hover also dimming siblings
+  // when nothing is actively selected (click takes priority over hover).
   useEffect(() => {
     const rows = rowRefs.current.filter(Boolean);
     const contents = contentRefs.current.filter(Boolean);
@@ -262,10 +263,18 @@ export const ProjectsSection = () => {
 
     rows.forEach((row, i) => {
       const isThisActive = i === activeIndex;
+      const isThisHovered = i === hoveredIndex;
       const content = contents[i];
 
+      let targetOpacity = 1;
+      if (activeIndex !== null) {
+        targetOpacity = isThisActive ? 1 : 0.12;
+      } else if (hoveredIndex !== null) {
+        targetOpacity = isThisHovered ? 1 : 0.3;
+      }
+
       gsap.to(row, {
-        opacity: activeIndex === null ? 1 : isThisActive ? 1 : 0.12,
+        opacity: targetOpacity,
         duration: 0.45,
         ease: "power2.out",
       });
@@ -305,7 +314,7 @@ export const ProjectsSection = () => {
         setTimeout(glitch, 60);
       }
     }
-  }, [activeIndex]);
+  }, [activeIndex, hoveredIndex]);
 
   const handleClick = (i) => {
     setActiveIndex((prev) => (prev === i ? null : i));
