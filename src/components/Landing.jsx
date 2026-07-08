@@ -9,6 +9,7 @@ import { CSS3DRenderer, CSS3DObject } from "three/examples/jsm/renderers/CSS3DRe
 import * as THREE from "three";
 import { AboutPreview } from "./AboutPreview";
 import { EffectComposer, SelectiveBloom, Selection, Select } from "@react-three/postprocessing";
+import { Perf } from "r3f-perf";
 
 // ── 3D constants ──────────────────────────────────────────────────────────────
 const GROUP_Z   = -3.5;
@@ -17,6 +18,16 @@ const CAM_X     = -0.199;
 const CAM_Y     =  1;
 const HOLE_X    = -0.128;
 const HOLE_Y    =  0.615;
+
+// ── DEBUG ──────────────────────────────────────────────────────────────────
+// EffectComposer/SelectiveBloom was confirmed as the source of a WebGL
+// render-target leak: textures climbed on every About<->Skills transition
+// and never released until a full page reload. Root cause (render targets
+// not being disposed on some internal re-alloc inside SelectiveBloom) isn't
+// fixed yet — bypassing the whole composer is the stable option for now.
+// Flip to false only once that's actually root-caused and fixed upstream.
+const DEBUG_SKIP_EFFECTS = true;
+const DEBUG_LOG_METRICS  = true; // console.log texture/program counts + resize events
 
 // Scroll geometry. SCROLL_ZONE_VH is how much scroll distance maps to the
 // camera dolly (progress 0 -> 1). DWELL_VH is extra pinned scroll *after*
@@ -86,9 +97,12 @@ const Typewriter = ({ text, words, speed = 150, deleteSpeed = 100, pause = 2000 
 };
 
 // ── TunnelR ───────────────────────────────────────────────────────────────────
-// Owns: the R geometry/lights/bloom (unchanged from before), the camera
-// dolly, and — new — bridging the About DOM into the same 3D space via
-// CSS3DObject so it keystones through the hole in sync with the camera.
+// Owns: the R geometry/lights/bloom, the camera dolly, and bridging the
+// About DOM into the same 3D space via CSS3DObject so it keystones through
+// the hole in sync with the camera. The About node is added to the CSS3D
+// scene once, on mount, and stays there permanently — it is never pulled
+// back out into plain in-flow DOM. Once scroll carries the pinned container
+// out of the sticky zone, it simply scrolls away with everything else.
 function TunnelR({
   progress, targetProgress, mouseRef, isDarkMode, isMobile,
   cssRendererRef, cssSceneRef, aboutObjRef, inTunnelRef, onFrame,
@@ -128,7 +142,23 @@ function TunnelR({
     camera.fov = fovForAspect(aspect);
     camera.updateProjectionMatrix();
     cssRendererRef.current?.setSize(size.width, size.height);
+    if (DEBUG_LOG_METRICS) {
+      console.log("[resize] size changed ->", size.width, size.height);
+    }
   }, [size, camera, cssRendererRef]);
+
+  // GPU resource watch — throttled so it doesn't spam every frame.
+  // textures should stay flat outside of intentional asset loads;
+  // programs (shaders) should stay essentially constant after warm-up.
+  useFrame(({ gl }) => {
+    if (DEBUG_LOG_METRICS && Math.random() < 0.01) {
+      console.log(
+        "[gpu] textures:", gl.info.memory.textures,
+        "geometries:", gl.info.memory.geometries,
+        "programs:", gl.info.programs.length
+      );
+    }
+  });
 
   const shapes = useMemo(() =>
     svg.paths.flatMap((p) => SVGLoader.createShapes(p)),
@@ -238,9 +268,10 @@ function TunnelR({
     }
 
     // ── About bridge ────────────────────────────────────────────────────
-    // Only touch the CSS3D object while it's actually part of the tunnel —
-    // once scroll has carried us past the pinned zone, this object has been
-    // removed from the scene and moved into normal document flow instead.
+    // The CSS3DObject lives in the scene permanently. While inTunnelRef is
+    // true we actively drive its transform off the camera; once the pinned
+    // zone ends we simply stop updating it (it holds its last transform)
+    // and it scrolls away naturally with the rest of the sticky container.
     if (inTunnelRef.current && aboutObjRef.current) {
       const tiltRamp = gsap.utils.clamp(0, 1, p / 0.9);
       const m = mouseRef?.current ?? { x: 0, y: 0 };
@@ -319,14 +350,16 @@ function TunnelR({
       />
 
       <Selection>
-        <EffectComposer autoClear={false}>
-          <SelectiveBloom
-            lights={bloomLights}
-            intensity={isDarkMode ? 0.6 : 0.9}
-            luminanceThreshold={isDarkMode ? 0.35 : 0.45}
-            luminanceSmoothing={0.6}
-          />
-        </EffectComposer>
+        {!DEBUG_SKIP_EFFECTS && (
+          <EffectComposer autoClear={false}>
+            <SelectiveBloom
+              lights={bloomLights}
+              intensity={isDarkMode ? 0.6 : 0.9}
+              luminanceThreshold={isDarkMode ? 0.35 : 0.45}
+              luminanceSmoothing={0.6}
+            />
+          </EffectComposer>
+        )}
 
         <Select enabled>
           <group scale={[0.01, -0.01, 1]} position={[-1.175, 1.65, GROUP_Z]}>
@@ -372,14 +405,12 @@ export const Landing = () => {
   const [isMobile, setIsMobile]     = useState(() => window.innerWidth < 768);
 
   // The one, real About DOM node. It's created once, portal-rendered once,
-  // and only ever moves between two *parents* — it's never recreated, never
-  // captured, never duplicated.
+  // and lives inside the CSS3D scene for the lifetime of the component.
   const [homeNode] = useState(() => document.createElement("div"));
 
   const containerRef       = useRef(null);
   const stickyRef          = useRef(null);
   const cssMountRef        = useRef(null);
-  const aboutFlowRef       = useRef(null);
   const zoomContainerRef   = useRef(null);
   const vaTextRef          = useRef(null);
   const rTextRef           = useRef(null);
@@ -391,9 +422,9 @@ export const Landing = () => {
   const progress       = useRef({ value: 0 });
   const targetProgress = useRef(0);
 
-  // True while we're inside the pinned zoom+dwell zone. This is a plain,
-  // synchronous function of scrollY — never a chased/lerped value — so
-  // there's nothing that can go stale or race.
+  // True while we're inside the pinned zoom+dwell zone. Drives the About
+  // bridge update loop and the Canvas frameloop mode — purely a perf/update
+  // gate now, not a DOM-relocation trigger.
   const inTunnelRef = useRef(true);
   const [inTunnelState, setInTunnelState] = useState(true);
 
@@ -466,23 +497,11 @@ export const Landing = () => {
     homeNode.style.pointerEvents = "auto"; // re-enable from the none-parent above
     const obj = new CSS3DObject(homeNode);
     aboutObjRef.current = obj;
+    scene.add(obj); // added once, stays for the component's lifetime — no reparenting to plain DOM.
 
     // ── Scroll geometry ──────────────────────────────────────────────────
     const zoomHeight = () => window.innerHeight * SCROLL_ZONE_VH;
     const pinHeight   = () => window.innerHeight * (SCROLL_ZONE_VH + DWELL_VH);
-
-const relocateAbout = (goingInTunnel) => {
-  if (goingInTunnel) {
-    if (!scene.children.includes(obj)) scene.add(obj);
-  } else {
-    scene.remove(obj);
-    homeNode.style.transform   = "";
-    homeNode.style.opacity     = "";
-    homeNode.style.position    = "";   // CSS3DObject sets this once on construction — must undo
-    homeNode.style.userSelect  = "";   // same
-    aboutFlowRef.current?.appendChild(homeNode);
-  }
-};
 
     // ── Initial state (handles page load mid-scroll on refresh) ───────────
     const initialY = window.scrollY;
@@ -492,7 +511,6 @@ const relocateAbout = (goingInTunnel) => {
     const startInTunnel = initialY < pinHeight();
     inTunnelRef.current  = startInTunnel;
     setInTunnelState(startInTunnel);
-    relocateAbout(startInTunnel);
     renderFrame(initP);
 
     // ── Scroll handler ──────────────────────────────────────────────────
@@ -506,7 +524,6 @@ const relocateAbout = (goingInTunnel) => {
       if (nowInTunnel !== inTunnelRef.current) {
         inTunnelRef.current = nowInTunnel;
         setInTunnelState(nowInTunnel);
-        relocateAbout(nowInTunnel);
       }
     };
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -560,6 +577,7 @@ const relocateAbout = (goingInTunnel) => {
                   toneMappingExposure: 1.2,
                 }}
               >
+                <Perf position="top-left" />
                 <TunnelR
                   progress={progress}
                   targetProgress={targetProgress}
@@ -634,11 +652,6 @@ const relocateAbout = (goingInTunnel) => {
           </div>
         </div>
       </div>
-
-      {/* Real in-flow home for the About content once the pinned zone ends.
-          Same node, same React tree — it just lands here instead of inside
-          the CSS3D scene. */}
-      <div ref={aboutFlowRef} className="w-full flex items-center justify-center" />
     </>
   );
 };

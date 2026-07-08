@@ -208,6 +208,7 @@ export const Skills = () => {
         y: t.clusterY - 10,
         scale: 1.3,
         rotate: overshoot,
+        filter: "blur(0px)",
         duration: 0.32,
         ease: "power4.out",
       }).to(t.el, {
@@ -355,12 +356,6 @@ export const Skills = () => {
       style={{ scrollMarginTop: "-20px" }}
       className="skills-section"
     >
-      {/* Ambient blobs */}
-      <div className="skills-blobs" aria-hidden="true">
-        <div className="blob blob-1" />
-        <div className="blob blob-2" />
-      </div>
-
       <div className="skills-inner">
         {/* Eyebrow header — same grammar as the Projects section: label / rule / count */}
         <div className="skills-eyebrow-row">
@@ -436,28 +431,6 @@ export const Skills = () => {
           flex-direction: column;
           padding: clamp(0.8rem, 2vh, 1.6rem) clamp(1rem, 3vw, 2rem);
           background: hsl(var(--background));
-        }
-
-        .skills-blobs {
-          position: absolute;
-          inset: 0;
-          pointer-events: none;
-          overflow: hidden;
-        }
-        .blob {
-          position: absolute;
-          border-radius: 50%;
-          filter: blur(110px);
-        }
-        .blob-1 {
-          width: 500px; height: 500px;
-          top: -100px; left: -100px;
-          background: rgba(255, 170, 0, 0.08);
-        }
-        .blob-2 {
-          width: 500px; height: 500px;
-          bottom: -100px; right: -100px;
-          background: rgba(234, 88, 12, 0.07);
         }
 
         .skills-inner {

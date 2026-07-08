@@ -21,12 +21,12 @@ export class FluidSimulation {
     this.width = window.innerWidth * this.dpr;
     this.height = window.innerHeight * this.dpr;
 
-    window.addEventListener("resize", () => {
-      this.renderer.setSize(window.innerWidth, window.innerHeight);
-      this.width = window.innerWidth * this.dpr;
-      this.height = window.innerHeight * this.dpr;
-      // Note: You may need to recreate render targets on resize for perfect scaling
-    });
+this._onResize = () => {
+  this.renderer.setSize(window.innerWidth, window.innerHeight);
+  this.width = window.innerWidth * this.dpr;
+  this.height = window.innerHeight * this.dpr;
+};
+window.addEventListener("resize", this._onResize);
   }
 
   _setupScene() {
@@ -149,30 +149,31 @@ _clearAllTargets() {
     };
   }
 
-  _setupInput() {
-    this.pointers = [{ id: -1, x: window.innerWidth / 2, y: window.innerHeight / 2, dx: 0, dy: 0, down: true, moved: false, color: [1, 1, 1] }];
-  
- const MAX_DELTA = 40; // px, per-axis cap — stops teleport-jumps from blowing up the sim
+_setupInput() {
+  this.pointers = [{ id: -1, x: window.innerWidth / 2, y: window.innerHeight / 2, dx: 0, dy: 0, down: true, moved: false, color: [1, 1, 1] }];
 
-  window.addEventListener("mousemove", (e) => {
+  const MAX_DELTA = 40;
+
+  this._onMouseMove = (e) => {
     const p = this.pointers[0];
     let rawDx = e.clientX - p.x;
     let rawDy = e.clientY - p.y;
-
     rawDx = Math.max(-MAX_DELTA, Math.min(MAX_DELTA, rawDx));
     rawDy = Math.max(-MAX_DELTA, Math.min(MAX_DELTA, rawDy));
-
     p.dx = rawDx * 5.0;
     p.dy = rawDy * 5.0;
     p.x = e.clientX;
     p.y = e.clientY;
     p.color = [1, 1, 1];
     p.moved = true;
-  });
+  };
 
-  window.addEventListener("mouseup", () => {
+  this._onMouseUp = () => {
     this.pointers[0].down = false;
-  });
+  };
+
+  window.addEventListener("mousemove", this._onMouseMove);
+  window.addEventListener("mouseup", this._onMouseUp);
 }
 
   _pass(material, target) {
@@ -202,6 +203,7 @@ _clearAllTargets() {
   _loop() {
     let lastTime = performance.now();
  const step = () => {
+    if (this._disposed) return;
     const now = performance.now();
     const dt = Math.min((now - lastTime) / 1000, 1 / 30); // cap at 1/30s so a stall doesn't overdrive advection
     lastTime = now;
@@ -274,8 +276,27 @@ _clearAllTargets() {
       display.uniforms.inkColor.value.set(...this.config.inkColor);
       this._pass(display, null);
 
-      requestAnimationFrame(step);
+      this._rafId = requestAnimationFrame(step);
     };
     step();
   }
+  dispose() {
+  this._disposed = true;
+  if (this._rafId) cancelAnimationFrame(this._rafId);
+
+  window.removeEventListener("mousemove", this._onMouseMove);
+  window.removeEventListener("mouseup", this._onMouseUp);
+  window.removeEventListener("resize", this._onResize);
+
+  [this.velocity.read, this.velocity.write,
+   this.dye.read, this.dye.write,
+   this.divergence, this.curl,
+   this.pressure.read, this.pressure.write,
+  ].forEach(t => t.dispose());
+
+  Object.values(this.material).forEach(m => m.dispose());
+
+  this.quad.geometry.dispose();
+  this.renderer.dispose();
+}
 }
