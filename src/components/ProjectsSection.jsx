@@ -8,49 +8,41 @@ const PROJECTS = [
   {
     title: "NEXUS",
     category: "Full Stack",
-    description: "Role-based web platform with secure auth, dashboard analytics, and real-time updates.",
-    tech: ["React", "Node.js", "MongoDB"],
-    github: "https://github.com",
-    live: "https://example.com",
-  },
-  {
-    title: "CIPHER",
-    category: "Backend",
-    description: "Security-focused API service with token management, permission checks, and audit trails.",
-    tech: ["Python", "FastAPI", "JWT"],
-    github: "https://github.com",
+    description: "Event-driven trading simulation engine with real-time order matching, built on Kafka and Redis, deployed via Kubernetes with Prometheus/Grafana observability.",
+    tech: ["Node.js", "Kafka", "Kubernetes"],
+    github: "https://github.com/Varun-JP/Trading-Engine-for-Real-Stock-Simulation-",
     live: null,
   },
   {
-    title: "AURORA",
+    title: "FOLIO",
     category: "Frontend",
-    description: "Performance dashboard with interactive charts and clean data drill-down views.",
-    tech: ["TypeScript", "D3.js", "REST API"],
-    github: "https://github.com",
-    live: "https://example.com",
-  },
-  {
-    title: "PULSE",
-    category: "Data",
-    description: "Event analytics pipeline that tracks usage metrics and exposes actionable insights.",
-    tech: ["JavaScript", "Express", "PostgreSQL"],
-    github: "https://github.com",
+    description: "This site — a scroll-driven Three.js tunnel built around an extruded 3D letterform, with bloom post-processing and a CSS3D-bridged About section.",
+    tech: ["React", "Three.js", "GSAP"],
+    github: "https://github.com/Varun-JP/Portfolio",
     live: null,
   },
   {
-    title: "VERTEX",
-    category: "Graphics",
-    description: "Interactive 3D viewer optimized for smooth rendering and intuitive scene controls.",
-    tech: ["Three.js", "WebGL", "GLSL"],
-    github: "https://github.com",
-    live: "https://example.com",
+    title: "LANE",
+    category: "Computer Vision",
+    description: "Real-time lane line detection for road video using edge detection and Hough transform, built for autonomous driving and driver-assist use cases.",
+    tech: ["Python", "OpenCV", "NumPy"],
+    github: "https://github.com/Varun-JP/Lane_detection_system",
+    live: null,
   },
   {
-    title: "PHANTOM",
-    category: "Dev Tools",
-    description: "Automation CLI for local workflows with config profiles and command chaining.",
-    tech: ["Python", "Bash", "Linux"],
-    github: "https://github.com",
+    title: "HEAT",
+    category: "Data",
+    description: "Mobile alert system that monitors live weather data and fires SMS notifications when temperatures cross heat-wave thresholds.",
+    tech: ["Python", "Twilio API", "OpenWeatherMap"],
+    github: "https://github.com/Varun-JP/Summer_heat_Wave_mobile_alert_System",
+    live: null,
+  },
+  {
+    title: "LEAF",
+    category: "Machine Learning",
+    description: "Image classification model for detecting plant leaf diseases from photos, aimed at early crop diagnosis.",
+    tech: ["Python"],
+    github: "https://github.com/Varun-JP/Plant_leaf_disease_detection",
     live: null,
   },
 ];
@@ -77,10 +69,9 @@ const PROJECT_FONTS = [
   "'Georgia', 'Times New Roman', serif",
   "'Space Grotesk', sans-serif",
   "'Courier New', monospace",
-  "'Georgia', serif",
 ];
 
-const PROJECT_WEIGHTS = [700, 400, 600, 800, 300, 500];
+const PROJECT_WEIGHTS = [700, 400, 600, 800, 300];
 
 // Timing — tuned to feel intentional, not flickery.
 const TICK_MS = 140; // how long each font holds before swapping to the next
